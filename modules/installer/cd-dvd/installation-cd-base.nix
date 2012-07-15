@@ -40,7 +40,7 @@ in
   # ISO naming.
   isoImage.isoName = "${config.isoImage.isoBaseName}-${config.system.nixosVersion}-${pkgs.stdenv.system}.iso";
 
-  isoImage.volumeID = "NIXOS_CD_${config.system.nixosVersion}";
+  isoImage.volumeID = "NIXOS_${config.system.nixosVersion}";
 
   installer.nixosURL = "http://nixos.org/releases/nixos/nixos-${config.system.nixosVersion}";
 
@@ -66,5 +66,5 @@ in
 
   # To speed up installation a little bit, include the complete stdenv
   # in the Nix store on the CD.
-  isoImage.storeContents = [ pkgs.stdenv pkgs.klibc pkgs.klibcShrunk ];
+  isoImage.storeContents = [ pkgs.stdenv pkgs.busybox ];
 }

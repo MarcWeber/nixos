@@ -83,7 +83,7 @@ with pkgs.lib;
       # Force udev to exit to prevent random "Device or resource busy
       # while trying to open /dev/xvda" errors from fsck.
       udevadm control --exit || true
-      kill -9 -- -1
+      kill -9 -1
     '';
     
   # Mount all formatted ephemeral disks and activate all swap devices.
@@ -146,4 +146,7 @@ with pkgs.lib;
 
   # Force getting the hostname from EC2.
   networking.hostName = mkDefault "";
+
+  # Always include cryptsetup so that Charon can use it.
+  environment.systemPackages = [ pkgs.cryptsetup ];
 }

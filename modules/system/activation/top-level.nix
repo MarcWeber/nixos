@@ -36,7 +36,7 @@ let
     };
 
     system.boot.loader.kernelFile = mkOption {
-      default = "";
+      default = pkgs.stdenv.platform.kernelTarget;
       description = ''
         Name of the kernel file to be passed to the bootloader.
       '';
@@ -152,7 +152,7 @@ let
     inherit children;
     kernelParams =
       config.boot.kernelParams ++ config.boot.extraKernelParams;
-    menuBuilder = config.system.build.menuBuilder;
+    menuBuilder = config.system.build.menuBuilder or "true";
     initScriptBuilder = config.system.build.initScriptBuilder;
     activationScript = config.system.activationScripts.script;
     nixosVersion = config.system.nixosVersion;
@@ -186,12 +186,10 @@ let
       if config.boot.loader.grub.enable
       then (builtins.parseDrvName config.system.build.grub.name).version
       else "";
-    grubDevices = with pkgs.lib; let
+    grubDevices =
+      let
         wrapQuotes = s: "\"" + s + "\"";
-        allDevices = [ config.boot.loader.grub.device ] ++
-          config.boot.loader.grub.devices;
-        definedDevices = filter (s: s != "") allDevices;
-      in map wrapQuotes definedDevices;
+      in map wrapQuotes config.boot.loader.grub.devices;
     configurationName = config.boot.loader.grub.configurationName;
   };
 
