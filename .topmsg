@@ -1,0 +1,6 @@
+From: Marc Weber <marco-oweber@gmx.de>
+Subject: [PATCH] experimental/ssd
+
+noop scheduler for ssd devices
+
+Signed-off-by: Marc Weber <marco-oweber@gmx.de>
