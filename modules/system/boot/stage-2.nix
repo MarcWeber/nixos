@@ -15,7 +15,7 @@ let
       };
 
       devSize = pkgs.lib.mkOption {
-        default = "50%";
+        default = "5%";
         example = "32m";
         description = ''
           Size limit for the /dev tmpfs. Look at mount(8), tmpfs size option,
@@ -33,11 +33,19 @@ let
       };
 
       runSize = pkgs.lib.mkOption {
-        default = "50%";
+        default = "25%";
         example = "256m";
         description = ''
           Size limit for the /run tmpfs. Look at mount(8), tmpfs size option,
           for the accepted syntax.
+        '';
+      };
+
+      cleanTmpDir = pkgs.lib.mkOption {
+        default = false;
+        example = true;
+        description = ''
+          Delete all files in /tmp/ during boot.
         '';
       };
     };
@@ -51,7 +59,7 @@ let
     src = ./stage-2-init.sh;
     shellDebug = "${pkgs.bashInteractive}/bin/bash";
     isExecutable = true;
-    inherit (config.boot) devShmSize runSize;
+    inherit (config.boot) devShmSize runSize cleanTmpDir;
     ttyGid = config.ids.gids.tty;
     upstart = config.system.build.upstart;
     path =
@@ -59,7 +67,7 @@ let
         pkgs.utillinux
         pkgs.udev
         pkgs.sysvtools
-      ];
+      ] ++ pkgs.lib.optional config.boot.cleanTmpDir pkgs.findutils;
     postBootCommands = pkgs.writeText "local-cmds"
       ''
         ${config.boot.postBootCommands}

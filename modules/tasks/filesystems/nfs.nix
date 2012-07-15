@@ -10,22 +10,19 @@ let
 
   rpcMountpoint = "${nfsStateDir}/rpc_pipefs";
 
-  idmapdConfFile = {
-    target = "idmapd.conf";
-    source = pkgs.writeText "idmapd.conf" ''
-      [General]
-      Pipefs-Directory = ${rpcMountpoint}
-      ${optionalString (config.networking.domain != "")
-        "Domain = ${config.networking.domain}"}
+  idmapdConfFile = pkgs.writeText "idmapd.conf" ''
+    [General]
+    Pipefs-Directory = ${rpcMountpoint}
+    ${optionalString (config.networking.domain != "")
+      "Domain = ${config.networking.domain}"}
 
-      [Mapping]
-      Nobody-User = nobody
-      Nobody-Group = nogroup
+    [Mapping]
+    Nobody-User = nobody
+    Nobody-Group = nogroup
 
-      [Translation]
-      Method = nsswitch
-    '';
-  };
+    [Translation]
+    Method = nsswitch
+  '';
 
 in
 
@@ -48,8 +45,6 @@ in
         # !!! Uh, why don't we just install mount.nfs?
         cp -v ${pkgs.klibc}/lib/klibc/bin.static/nfsmount $out/bin
       '';
-
-    environment.etc = singleton idmapdConfFile;
 
     # Ensure that statd and idmapd are started before mountall.
     jobs.mountall.preStart =
@@ -99,7 +94,7 @@ in
 
         daemonType = "fork";
 
-        exec = "rpc.idmapd";
+        exec = "rpc.idmapd -v -c ${idmapdConfFile}";
       };
 
   };

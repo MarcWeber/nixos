@@ -30,6 +30,14 @@ let
   hktn = attrByPath [cfg.hostKeyType] (throw "unknown host key type `${cfg.hostKeyType}'") hostKeyTypeNames;
   hktb = attrByPath [cfg.hostKeyType] (throw "unknown host key type `${cfg.hostKeyType}'") hostKeyTypeBits;
 
+  knownHosts = map (h: getAttr h cfg.knownHosts) (attrNames cfg.knownHosts);
+
+  knownHostsFile = pkgs.writeText "ssh_known_hosts" (
+    flip concatMapStrings knownHosts (h:
+      "${concatStringsSep "," h.hostNames} ${builtins.readFile h.publicKeyFile}"
+    )
+  );
+
   userOptions = {
     openssh.authorizedKeys = {
 
@@ -82,7 +90,7 @@ let
       userLoop = flip concatMapStrings usersWithKeys (u:
         let
           authKeys = concatStringsSep "," u.openssh.authorizedKeys.keys;
-          authKeyFiles = concatStringsSep " " u.openssh.authorizedKeys.keyFiles;
+          authKeyFiles = concatStrings (map (x: " ${x}") u.openssh.authorizedKeys.keyFiles);
           preserveExisting = if u.openssh.authorizedKeys.preserveExistingKeys then "true" else "false";
         in ''
           mkAuthKeysFile "${u.name}" "${authKeys}" "${authKeyFiles}" "${preserveExisting}"
@@ -95,25 +103,34 @@ let
         local authKeyFiles="$3"
         local preserveExisting="$4"
 
-        eval authfile=~$userName/.ssh/authorized_keys
-        mkdir -p "$(dirname $authfile)"
-        touch "$authfile"
+        eval homeDir=~$userName
+        if ! [ -d "$homeDir" ]; then
+          echo "User $userName does not exist"
+          return
+        fi
+        if ! [ -d "$homeDir/.ssh" ]; then
+          mkdir -v -m 700 "$homeDir/.ssh"
+          chown "$userName":users "$homeDir/.ssh"
+        fi
+        local authKeysFile="$homeDir/.ssh/authorized_keys"
+        touch "$authKeysFile"
         if [ "$preserveExisting" == false ]; then
-          rm -f "$authfile"
-          echo "${marker2}" > "$authfile"
+          rm -f "$authKeysFile"
+          echo "${marker2}" > "$authKeysFile"
         else
-          sed -i '/${marker1}/ d' "$authfile"
+          sed -i '/${marker1}/ d' "$authKeysFile"
         fi
         IFS=,
         for f in $authKeys; do
-          echo "$f ${marker1}" >> "$authfile"
+          echo "$f ${marker1}" >> "$authKeysFile"
         done
         unset IFS
         for f in $authKeyFiles; do
           if [ -f "$f" ]; then
-            echo "$(cat "$f") ${marker1}" >> "$authfile"
+            echo "$(cat "$f") ${marker1}" >> "$authKeysFile"
           fi
         done
+        chown "$userName" "$authKeysFile"
       }
 
       ${userLoop}
@@ -210,12 +227,62 @@ in
 
       hostKeyType = mkOption {
         default = "dsa1024";
-        description = "Type of host key to generate (dsa1024/rsa1024/ecdsa521)";
+        description = ''
+          Type of host key to generate (dsa1024/rsa1024/ecdsa521), if
+          the file specified by <literal>hostKeyPath</literal> does not
+          exist when the service starts.
+        '';
+      };
+
+      hostKeyPath = mkOption {
+        default = "/etc/ssh/ssh_host_${hktn}_key";
+        description = ''
+          Path to the server's private key. If there is no key file
+          on this path, it will be generated when the service is
+          started for the first time. Otherwise, the ssh daemon will
+          use the specified key directly in-place.
+        '';
       };
 
       extraConfig = mkOption {
         default = "";
         description = "Verbatim contents of <filename>sshd_config</filename>.";
+      };
+
+      knownHosts = mkOption {
+        default = {};
+        type = types.loaOf types.optionSet;
+        description = ''
+          The set of system-wide known SSH hosts.
+        '';
+        example = [
+          { 
+            hostNames = [ "myhost" "myhost.mydomain.com" "10.10.1.4" ];
+            publicKeyFile = ./pubkeys/myhost_ssh_host_dsa_key.pub;
+          }
+          { 
+            hostNames = [ "myhost2" ];
+            publicKeyFile = ./pubkeys/myhost2_ssh_host_dsa_key.pub;
+          }
+        ];
+        options = {
+          hostNames = mkOption {
+            type = types.listOf types.string;
+            default = [];
+            description = ''
+              A list of host names and/or IP numbers used for accessing
+              the host's ssh service.
+            '';
+          };
+          publicKeyFile = mkOption {
+            description = ''
+              The path to the public key file for the host. The public
+              key file is read at build time and saved in the Nix store.
+              You can fetch a public key file from a running SSH server
+              with the <literal>ssh-keyscan</literal> command.
+            '';
+          };
+        };
       };
 
     };
@@ -238,10 +305,14 @@ in
         home = "/var/empty";
       };
 
-    environment.etc = singleton
+    environment.etc = [
       { source = "${pkgs.openssh}/etc/ssh/moduli";
         target = "ssh/moduli";
-      };
+      }
+      { source = knownHostsFile;
+        target = "ssh/ssh_known_hosts";
+      }
+    ];
 
     jobs.sshd = {
 
@@ -263,8 +334,8 @@ in
 
             mkdir -m 0755 -p /etc/ssh
 
-            if ! test -f /etc/ssh/ssh_host_${hktn}_key; then
-                ssh-keygen -t ${hktn} -b ${toString hktb} -f /etc/ssh/ssh_host_${hktn}_key -N ""
+            if ! test -f ${cfg.hostKeyPath}; then
+                ssh-keygen -t ${hktn} -b ${toString hktb} -f ${cfg.hostKeyPath} -N ""
             fi
           '';
 
@@ -272,7 +343,7 @@ in
 
         exec =
           ''
-            ${pkgs.openssh}/sbin/sshd -h /etc/ssh/ssh_host_${hktn}_key \
+            ${pkgs.openssh}/sbin/sshd -h ${cfg.hostKeyPath} \
               -f ${pkgs.writeText "sshd_config" cfg.extraConfig}
           '';
       };

@@ -1,5 +1,5 @@
 # This module contains the basic configuration for building a NixOS
-# installation CD.
+# tarball for the sheevaplug.
 
 { config, pkgs, ... }:
 
@@ -40,7 +40,7 @@ in
 
 {
   require =
-    [ options
+    [
       ./system-tarball.nix
       ../../hardware/network/rt73.nix
     ];
@@ -87,6 +87,7 @@ in
       pkgs.bvi # binary editor
       pkgs.joe
     ];
+*/
 
   boot.loader.grub.enable = false;
   boot.loader.generationsDir.enable = false;
@@ -120,7 +121,17 @@ in
       # "console=ttyS0,115200n8"  # serial console
     ];
 
-  boot.kernelPackages = pkgs.linuxPackages_2_6_35;
+  boot.kernelPackages = pkgs.linuxPackages_3_4;
+
+  boot.supportedFilesystems = [ "reiserfs" ];
+
+  /* fake entry, just to have a happy stage-1. Users
+     may boot without having stage-1 though */
+  fileSystems = [
+    { mountPoint = "/";
+      device = "/dev/something";
+      }
+  ];
 
   services.mingetty = {
     ttys = [ "ttyS0" ];
@@ -165,6 +176,9 @@ in
   services.openssh.enable = true;
   services.ttyBackgrounds.enable = false;
   jobs.openssh.startOn = pkgs.lib.mkOverrideTemplate 50 {} "";
+
+  # Needed for nixos to evaluate
+  system.build.menuBuilder = "true";
 
   nixpkgs.config = {
     platform = pkgs.platforms.sheevaplug;

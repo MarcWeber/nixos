@@ -38,7 +38,9 @@ fi
 
 # Do a nix-pull to speed up building.
 if test -n "@nixosURL@" -a ${NIXOS_PULL:-1} != 0; then
-    @nix@/bin/nix-pull @nixosURL@/MANIFEST || true
+    mkdir -p /nix/var/nix/channel-cache -m 0755
+    NIX_DOWNLOAD_CACHE=/nix/var/nix/channel-cache \
+        @nix@/bin/nix-pull @nixosURL@/MANIFEST || true
 fi
 
 
@@ -80,7 +82,7 @@ mkdir -m 0755 -p \
     $mountPoint/nix/var/log/nix/drvs
 
 mkdir -m 1775 -p $mountPoint/nix/store
-chown root.nixbld $mountPoint/nix/store
+chown root:nixbld $mountPoint/nix/store
 
 
 # Get the store paths to copy from the references graph.
@@ -91,6 +93,7 @@ storePaths=$(@perl@/bin/perl @pathsFromGraph@ @nixClosure@)
 echo "copying Nix to $mountPoint...."
 for i in $storePaths; do
     echo "  $i"
+    chattr -R -i $mountPoint/$i 2> /dev/null || true # clear immutable bit
     rsync -a $i $mountPoint/nix/store/
 done
 
@@ -124,7 +127,7 @@ ln -sf @shell@ $mountPoint/bin/sh
 
 if test -n "$NIXOS_PREPARE_CHROOT_ONLY"; then
     echo "User requested only to prepare chroot. Exiting."
-    exit 0;
+    exit 0
 fi
 
 
@@ -153,12 +156,6 @@ NIX_PATH="/mnt$srcs/nixos:nixos-config=/mnt$NIXOS_CONFIG" NIXOS_CONFIG= \
     -p /nix/var/nix/profiles/system -f '<nixos>' --set -A system --show-trace
 
 
-# We're done building/downloading, so we don't need the /etc bind
-# mount anymore.  In fact, below we want to modify the target's /etc.
-umount $mountPoint/etc/nixos
-umount $mountPoint/etc
-
-
 # Copy the NixOS/Nixpkgs sources to the target as the initial contents
 # of the NixOS channel.
 echo "copying NixOS/Nixpkgs sources..."
@@ -168,7 +165,13 @@ mkdir -m 0755 -p $mountPoint/nix/var/nix/profiles/per-user/root
 chroot $mountPoint @nix@/bin/nix-env \
     -p /nix/var/nix/profiles/per-user/root/channels -i "$srcs" --quiet
 mkdir -m 0700 -p $mountPoint/root/.nix-defexpr
-ln -s /nix/var/nix/profiles/per-user/root/channels $mountPoint/root/.nix-defexpr/channels
+ln -sfn /nix/var/nix/profiles/per-user/root/channels $mountPoint/root/.nix-defexpr/channels
+
+
+# We're done building/downloading, so we don't need the /etc bind
+# mount anymore.  In fact, below we want to modify the target's /etc.
+umount $mountPoint/etc/nixos
+umount $mountPoint/etc
 
 
 # Grub needs an mtab.

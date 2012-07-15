@@ -15,14 +15,14 @@ let
           + " " + fs.fsType
           + " " + fs.options
           + " 0"
-          + " " + (if fs.fsType == "none" || fs.noCheck then "0" else
+          + " " + (if fs.fsType == "none" || fs.fsType == "btrfs" || fs.noCheck then "0" else
                    if fs.mountPoint == "/" then "1" else "2")
           + "\n"
       )}
 
       # Swap devices.
       ${flip concatMapStrings config.swapDevices (sw:
-           "${sw.device} none swap\n"
+          "${sw.device} none swap\n"
       )}
     '';
 
@@ -69,7 +69,7 @@ in
         <command>mkdir -p</command> .
       '';
 
-      type = types.nullOr (types.list types.optionSet);
+      type = types.list types.optionSet;
 
       options = {
 
@@ -114,6 +114,17 @@ in
           description = ''
             Automatically create the mount point defined in
             <option>fileSystems.*.mountPoint</option>.
+          '';
+        };
+
+        autoFormat = mkOption {
+          default = false;
+          type = types.bool;
+          description = ''
+            If the device does not currently contain a filesystem (as
+            determined by <command>blkid</command>, then automatically
+            format it with the filesystem type specified in
+            <option>fsType</option>.  Use with caution.
           '';
         };
 
@@ -172,7 +183,7 @@ in
       };
 
     jobs.mountall =
-      { startOn = "started udev";
+      { startOn = "started udev or config-changed";
 
         task = true;
 
@@ -186,11 +197,33 @@ in
             # ${fstab}
             echo "mounting filesystems..."
 
+            # Format devices.
+            ${flip concatMapStrings config.fileSystems (fs: optionalString fs.autoFormat ''
+              if [ -e "${fs.device}" ]; then
+                type=$(blkid -p -s TYPE -o value "${fs.device}" || true)
+                if [ -z "$type" ]; then
+                  echo "creating ${fs.fsType} filesystem on ${fs.device}..."
+                  mkfs.${fs.fsType} "${fs.device}"
+                fi
+              fi
+            '')}
+
             # Create missing mount points.  Note that this won't work
             # if the mount point is under another mount point.
             ${flip concatMapStrings config.fileSystems (fs: optionalString fs.autocreate ''
               mkdir -p -m 0755 '${fs.mountPoint}'
             '')}
+
+            # Create missing swapfiles.
+            # FIXME: support changing the size of existing swapfiles.
+            ${flip concatMapStrings config.swapDevices (sw: optionalString (sw.size != null) ''
+              if [ ! -e "${sw.device}" -a -e "$(dirname "${sw.device}")" ]; then
+                # FIXME: use ‘fallocate’ on filesystems that support it.
+                dd if=/dev/zero of="${sw.device}" bs=1M count=${toString sw.size}
+                mkswap ${sw.device}
+              fi
+            '')}
+            
           '';
 
         daemonType = "daemon";

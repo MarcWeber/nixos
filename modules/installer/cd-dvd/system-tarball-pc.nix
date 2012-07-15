@@ -1,5 +1,5 @@
 # This module contains the basic configuration for building a NixOS
-# installation CD.
+# tarball, that can directly boot, maybe using PXE or unpacking on a fs.
 
 { config, pkgs, ... }:
 
@@ -123,7 +123,7 @@ in
 
   # To speed up further installation of packages, include the complete stdenv
   # in the Nix store of the tarball.
-  tarball.storeContents = pkgs2storeContents [ pkgs.stdenv pkgs.klibc pkgs.klibcShrunk ];
+  tarball.storeContents = pkgs2storeContents [ pkgs.stdenv ];
 
   tarball.contents =
     [ { source = config.boot.kernelPackages.kernel + "/" + config.system.boot.loader.kernelFile;
@@ -158,15 +158,22 @@ in
   services.openssh.enable = true;
   jobs.openssh.startOn = pkgs.lib.mkOverrideTemplate 50 {} "";
 
-  # To have a nicer initrd, even though the initrd can't mount an nfsroot now
-  boot.initrd.withExtraTools = true;
-
   # To be able to use the systemTarball to catch troubles.
   boot.crashDump = {
     enable = true;
-    # Why not a recent kernel?
-    kernelPackages = pkgs.linuxPackages_3_2;
+    kernelPackages = pkgs.linuxPackages_3_4;
   };
+
+  # No grub for the tarball.
+  boot.loader.grub.enable = false;
+
+  /* fake entry, just to have a happy stage-1. Users
+     may boot without having stage-1 though */
+  fileSystems = [
+    { mountPoint = "/";
+      device = "/dev/something";
+      }
+  ];
 
   nixpkgs.config = {
     packageOverrides = p: rec {

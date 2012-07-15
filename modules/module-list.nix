@@ -15,6 +15,7 @@
   ./config/unix-odbc-drivers.nix
   ./config/users-groups.nix
   ./hardware/cpu/intel-microcode.nix
+  ./hardware/network/b43.nix
   ./hardware/network/intel-2100bg.nix
   ./hardware/network/intel-2200bg.nix
   ./hardware/network/intel-3945abg.nix
@@ -34,6 +35,7 @@
   ./misc/crashdump.nix
   ./misc/ids.nix
   ./misc/locate.nix
+  ./misc/lib.nix
   ./misc/nixpkgs.nix
   ./misc/passthru.nix
   ./misc/version.nix
@@ -83,6 +85,7 @@
   ./services/hardware/upower.nix
   ./services/logging/klogd.nix
   ./services/logging/logrotate.nix
+  ./services/logging/logstash.nix
   ./services/logging/syslogd.nix
   ./services/mail/dovecot.nix
   ./services/mail/dovecot2.nix
@@ -196,7 +199,6 @@
   ./system/boot/luksroot.nix
   ./system/boot/modprobe.nix
   ./system/boot/stage-1.nix
-  ./system/boot/stage-1-extratools.nix
   ./system/boot/stage-2.nix
   ./system/etc/etc.nix
   ./system/upstart-events/control-alt-delete.nix
