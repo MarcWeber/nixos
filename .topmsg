@@ -1,0 +1,10 @@
+From: Marc Weber <marco-oweber@gmx.de>
+Subject: [PATCH] experimental/virtualbox
+
+split virtualbox into server and guest part.
+
+services.virtualbox.server.enabled = true
+adds virtualbox to system path and adds kernel modules to the module path.
+kernel modules are modprobed
+
+Signed-off-by: Marc Weber <marco-oweber@gmx.de>
