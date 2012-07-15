@@ -38,6 +38,7 @@
   ./misc/lib.nix
   ./misc/nixpkgs.nix
   ./misc/passthru.nix
+  ./misc/ssd.nix
   ./misc/version.nix
   ./programs/bash/bash.nix
   ./programs/blcr.nix
