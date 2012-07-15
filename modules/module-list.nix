@@ -220,5 +220,6 @@
   ./virtualisation/libvirtd.nix
   ./virtualisation/nova.nix
   ./virtualisation/virtualbox-guest.nix
+  ./services/misc/virtualbox-server.nix
   ./virtualisation/xen-dom0.nix
 ]

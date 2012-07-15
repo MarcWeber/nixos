@@ -6,7 +6,7 @@ with pkgs.lib;
 
 let
 
-  cfg = config.services.virtualbox;
+  cfg = config.services.virtualbox.guest;
   kernel = config.boot.kernelPackages;
 
 in
@@ -15,19 +15,10 @@ in
 
   ###### interface
 
-  options = {
-
-    services.virtualbox = {
-
-      enable = mkOption {
-        default = false;
-        description = "Whether to enable the VirtualBox service and other guest additions.";
-      };
-
-    };
-
+  options.services.virtualbox.guest.enable = mkOption {
+      default = false;
+      description = "Whether to enable the VirtualBox service and other guest additions.";
   };
-
 
   ###### implementation
 
@@ -35,10 +26,10 @@ in
 
     environment.systemPackages = [ kernel.virtualboxGuestAdditions ];
 
-    boot.extraModulePackages = [ kernel.virtualboxGuestAdditions ];
+    boot.extraModulePackages = [ pkgs.linuxPackages.virtualboxGuestAdditions ];
 
     jobs.virtualbox =
-      { description = "VirtualBox service";
+      {description = "VirtualBox service";
 
         startOn = "started udev";
 
@@ -74,5 +65,4 @@ in
       '';
       
   };
-
 }
