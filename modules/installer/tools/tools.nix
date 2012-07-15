@@ -60,7 +60,7 @@ let
       inherit nixClosure nix;
 
       # TODO shell ?
-      nixpkgsURL = cfg.nixpkgsURL;
+      nixosURL = cfg.nixosURL;
     };
 
     # see ./nixos-bootstrap-archive/README-BOOTSTRAP-NIXOS

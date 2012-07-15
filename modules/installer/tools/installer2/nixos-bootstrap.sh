@@ -112,8 +112,8 @@ mkdir -m 0755 -p \
     /nix/var/log/nix/drvs
 
 # Do a nix-pull to speed up building.
-if test -n "@nixpkgsURL@" -a ${NIXOS_PULL} != 0; then
-    @nix@/bin/nix-pull @nixpkgsURL@/MANIFEST || true
+if test -n "@nixosURL@" -a ${NIXOS_PULL} != 0; then
+    @nix@/bin/nix-pull @nixosURL@/MANIFEST || true
 fi
 
 # Build the specified Nix expression in the target store and install
