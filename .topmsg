@@ -1,0 +1,9 @@
+From: Marc Weber <marco-oweber@gmx.de>
+Subject: [PATCH] experimental/minimal-install-archive
+
+keep my minmial boot archive working. Its a simple archive which is self contained
+and does
+- chroot
+- ship glibc, nix, .. so that you can install nixos
+
+Signed-off-by: Marc Weber <marco-oweber@gmx.de>
