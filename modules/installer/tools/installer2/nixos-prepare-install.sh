@@ -12,7 +12,7 @@ usage(){
   cat << EOF
   script options [list of actions]
 
-  Example usage: nixos-prepare-install copy-nix guess-config checkout-sources-git-marcweber
+  Example usage: nixos-prepare-install create-passwd copy-nix guess-config checkout-sources
   default list of actions: $DEFAULTS
 
   actions:
@@ -30,6 +30,8 @@ usage(){
     checkout-sources: git checkout official repos into T/ (TODO: official manifest should be used!)
     checkout-sources-git-marcweber: checkout nixos/nixpkgs patches maintained by Marc Weber T/
 
+    create-passwd: some derivations (such as git checkout) requires a /etc/passwd file.
+                   create a simple one.
 
     where T=$T
       and repos = $ALL_REPOS
@@ -86,7 +88,7 @@ ACTIONS=""
 # check and handle options:
 for a in $@; do
   case "$a" in
-    copy-nix|copy-nixos-bootstrap|guess-config|copy-sources|checkout-sources|checkout-sources-git-marcweber)
+    copy-nix|copy-nixos-bootstrap|guess-config|copy-sources|checkout-sources|checkout-sources-git-marcweber|create-passwd)
       ACTIONS="$ACTIONS $a"
     ;;
     --dir-ok)
@@ -246,6 +248,28 @@ for a in $ACTIONS; do
       # will work anymore.)
       # TODO: check permissions so that paths can't be changed later?
       bash $RUN_IN_CHROOT '@nix@/bin/nix-store --register-validity' < $NIX_CLOSURE
+
+    ;;
+
+    create-passwd)
+        if [ -x "$mountPoint/etc/passwd" ]; then
+          echo "not overriding $mountPoint/etc/passwd"
+        else
+    cat > "$mountPoint/etc/passwd" << EOF
+root:x:0:0:System administrator:/root:/var/run/current-system/sw/bin/zsh
+nobody:x:65534:65534:Unprivileged account (don't use!):/var/empty:/noshell
+nixbld1:x:30001:30000:Nix build user 1:/var/empty:/noshell
+nixbld2:x:30002:30000:Nix build user 2:/var/empty:/noshell
+nixbld3:x:30003:30000:Nix build user 3:/var/empty:/noshell
+nixbld4:x:30004:30000:Nix build user 4:/var/empty:/noshell
+nixbld5:x:30005:30000:Nix build user 5:/var/empty:/noshell
+nixbld6:x:30006:30000:Nix build user 6:/var/empty:/noshell
+nixbld7:x:30007:30000:Nix build user 7:/var/empty:/noshell
+nixbld8:x:30008:30000:Nix build user 8:/var/empty:/noshell
+nixbld9:x:30009:30000:Nix build user 9:/var/empty:/noshell
+nixbld10:x:30010:30000:Nix build user 10:/var/empty:/noshell
+EOF
+        fi
 
     ;;
 
