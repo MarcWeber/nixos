@@ -4,6 +4,11 @@
 # finally runs switch-to-configuration optionally registering grub
 set -e
 
+# We don't have locale-archive in the chroot, so clear $LANG.
+export LANG=
+
+export PATH=@coreutils@/bin
+
 usage(){
   cat << EOF
   script --install [--fast] [--no-grub]
@@ -19,6 +24,8 @@ usage(){
 
   -jn        : number of build tasks done simultaniously
   --keep-going: Build as much as possible.
+  --show-trace
+  --fallback
 
   --fast     : same as nixos-rebuild --fast
 
@@ -78,10 +85,12 @@ for arg in $@; do
   case $arg in
     --no-pull)     NIXOS_PULL=0;;
     --install)     INSTALL=1;;
-    --no-grub)     NIXOS_INSTALL_GRUB=;;
+    --no-grub)
+          # keeping it unset will still install grub because grub version appears to the script to be changed
+          NIXOS_INSTALL_GRUB=0;;
     --debug)       set -x;;
-    -j*)           NIX_ENV_ARGS="$NIX_ENV_ARGS $arg";;
-    --keep-going)  NIX_ENV_ARGS="$NIX_ENV_ARGS $arg";;
+    -j*|--keep-going|--show-trace|--fallback|--show-trace) 
+                   NIX_ENV_ARGS="$NIX_ENV_ARGS $arg";;
     --fast)        NIXOS_PULL=0;;
     *)             usage;
   esac
@@ -92,10 +101,6 @@ if [ "$INSTALL" != 1 ]; then
 fi
 
 
-# We don't have locale-archive in the chroot, so clear $LANG.
-export LANG=
-
-export PATH=@coreutils@/bin
 
 mkdir -m 01777 -p /tmp
 mkdir -m 0755 -p /var
@@ -112,8 +117,8 @@ mkdir -m 0755 -p \
     /nix/var/log/nix/drvs
 
 # Do a nix-pull to speed up building.
-if test -n "@nixosURL@" -a ${NIXOS_PULL} != 0; then
-    @nix@/bin/nix-pull @nixosURL@/MANIFEST || true
+if test -n "@nixpkgsURL@" -a ${NIXOS_PULL} != 0; then
+    @nix@/bin/nix-pull @nixpkgsURL@/MANIFEST || true
 fi
 
 # Build the specified Nix expression in the target store and install
@@ -139,3 +144,5 @@ ln -sfn /proc/mounts /etc/mtab
 INFO "finalising the installation..."
 export NIXOS_INSTALL_GRUB
 /nix/var/nix/profiles/system/bin/switch-to-configuration boot
+
+INFO "Now consider adding a root password using \"run-in-chroot passwd\""

@@ -51,7 +51,15 @@ unprepare(){
 run_cmd(){
   prepare
   trap "unprepare" EXIT
-  chroot $mountPoint $@
+  P="$PATH"
+
+  # /var/run/current-system/ may not exist (yet) in chroot. Thus add main system profile (which exists after installation)
+  # so that its more likely that the tools you want can be found
+  if [ -d "$mountPoint"/nix/var/nix/profiles/system/sw/sbin -a -z "$DONT_TOUCH_PATH" ]; then
+    P="$P":/nix/var/nix/profiles/system/sw/sbin:/nix/var/nix/profiles/system/sw/bin
+  fi
+
+  PATH="$P" chroot $mountPoint $@
 }
 
 

@@ -12,19 +12,23 @@ usage(){
   cat << EOF
   script options [list of actions]
 
-  actions:
+  Example usage: nixos-prepare-install copy-nix guess-config checkout-sources-git-marcweber
+  default list of actions: $DEFAULTS
 
-    guess-config:     run nixos-hardware-scan > T/configuration.nix
+  actions:
+    [none]: /bin/sh symlink is always created if this script is run
+
+    guess-config:     run nixos-hardware-scan > T/configuration.nix (TODO: implement this)
     copy-nix:         (1) copy minimal nix system which can bootstrap the whole
                       system unless bootstrapping from an archive in which case
                       file should be in place.
-                      (2) creates $mountPoint/bin/sh symlink
-                      (3) registering store paths as valid
+                      (2) registering store paths as valid
     copy-nixos-bootstrap:
                       copy the nixos-bootstrap script to /nix/store where it will be
                       garbage collected later
     copy-sources:     copy repos   into T/
-    checkout-sources: svn checkout official repos into T/
+    checkout-sources: git checkout official repos into T/ (TODO: official manifest should be used!)
+    checkout-sources-git-marcweber: checkout nixos/nixpkgs patches maintained by Marc Weber T/
 
 
     where T=$T
@@ -38,13 +42,13 @@ usage(){
     --debug: set -x
 
 
-  default list of actions: $DEFAULTS
 EOF
   exit 1
 }
 
 
 INFO(){ echo "INFO: " $@; }
+CMD_ECHO(){ echo "running $@"; $@; }
 
 # = configuration =
 
@@ -69,6 +73,11 @@ T="$mountPoint/etc/nixos"
 
 NIX_CLOSURE=${NIX_CLOSURE:-@nixClosure@}
 
+# minimal bootstrap archive:
+RUN_IN_CHROOT=$mountPoint/nix/store/run-in-chroot
+# iso image case:
+[ -f $RUN_IN_CHROOT ] || RUN_IN_CHROOT=run-in-chroot
+
 die(){ echo "!>> " $@; exit 1; }
 
 ## = read options =
@@ -77,7 +86,7 @@ ACTIONS=""
 # check and handle options:
 for a in $@; do
   case "$a" in
-    copy-nix|copy-nixos-bootstrap|guess-config|copy-sources|checkout-sources)
+    copy-nix|copy-nixos-bootstrap|guess-config|copy-sources|checkout-sources|checkout-sources-git-marcweber)
       ACTIONS="$ACTIONS $a"
     ;;
     --dir-ok)
@@ -128,6 +137,17 @@ target_realised(){
 createDirs(){
   mkdir -m 0755 -p $mountPoint/etc/nixos
   mkdir -m 1777 -p $mountPoint/nix/store
+
+  # Create the required /bin/sh symlink; otherwise lots of things
+  # (notably the system() function) won't work.
+  mkdir -m 0755 -p $mountPoint/bin
+  ln -sf @shell@ $mountPoint/bin/sh
+  # TODO permissions of this file?
+  mkdir -p -m 0755 $mountPoint/var/run/nix/current-load
+  [ -e "$mountPoint/etc/nix.machines" ] || {
+    CMD_ECHO touch "$mountPoint/etc/nix.machines"
+  }
+
 }
 
 
@@ -137,17 +157,29 @@ realise_repo(){
 
   createDirs
 
-  if [ "$action" == "copy-sources" ]; then
-
-    local repo_sources="${repo}_SOURCES"
-    rsync -a -r "${SRC_BASE}/$repo" "$T"
-
-  else
-
-    INFO "checking out $repo"
-    svn co "$SVN_BASE/$repo/trunk" "$T/$repo"
-
-  fi
+  case "$action" in
+    copy-sources)
+      local repo_sources="${repo}_SOURCES"
+      rsync -a -r "${SRC_BASE}/$repo" "$T"
+    ;;
+    checkout-sources)
+      INFO "checking out $repo"
+      local git_base=https://github.com/nixos
+      CMD_ECHO git clone --depth=1 $url "$T/$repo"
+    ;;
+    checkout-sources-git-marcweber)
+      INFO "checking out $repo"
+      local git_base=https://github.com/MarcWeber
+      local url=$git_base/$repo.git
+      local branch
+      case "$repo" in
+        nixos)   branch=experimental/marc ;;
+        nixpkgs) branch=experimental/marc ;;
+      esac
+      INFO "checkout out $repo"
+      CMD_ECHO git clone --depth=1 -b $branch $url "$T/$repo"
+    ;;
+  esac
 
 }
 
@@ -164,15 +196,19 @@ pathsFromGraph(){
   done
 }
 
+createDirs
+
 # = run actions: =
 for a in $ACTIONS; do
   case "$a" in
 
-    guess_config)
-      local config="$T/configuration.nix"
+    guess-config)
+      createDirs
       target_realised "$config" || {
         INFO "creating simple configuration file"
-        nixos-hardware-scan > "$config"
+        # does not work in chroot ? (readlink line 71 which is /sys/bus/pci/devices/0000:00:1a.0/driver/module -> ../../../../module/uhci_hcd here
+        # $mountPoint/nix/store/run-in-chroot "@nixosHardwareScan@/bin/nixos-hardware-scan > /etc/nixos/configuration.nix"
+        perl $mountPoint/@nixosHardwareScan@/bin/nixos-hardware-scan > $mountPoint/etc/nixos/configuration.nix
         echo
         INFO "Note: you can start customizing $config while remaining actions will are being executed"
         echo
@@ -202,11 +238,6 @@ for a in $ACTIONS; do
 
       [ -e "$NIX_CLOSURE" ] || die "Couldn't find nixClosure $NIX_CLOSURE anywhere. Can't register inital store paths valid. Exiting"
 
-      # Create the required /bin/sh symlink; otherwise lots of things
-      # (notably the system() function) won't work.
-      mkdir -m 0755 -p $mountPoint/bin
-      ln -sf @shell@ $mountPoint/bin/sh
-
       INFO "registering bootstrapping store paths as valid so that they won't be rebuild"
       # Register the paths in the Nix closure as valid.  This is necessary
       # to prevent them from being deleted the first time we install
@@ -214,11 +245,11 @@ for a in $ACTIONS; do
       # valid, delete it to get it out of the way, but as a result nothing
       # will work anymore.)
       # TODO: check permissions so that paths can't be changed later?
-      chroot "$mountPoint" @nix@/bin/nix-store --register-validity < $NIX_CLOSURE
+      bash $RUN_IN_CHROOT '@nix@/bin/nix-store --register-validity' < $NIX_CLOSURE
 
     ;;
 
-    copy-sources|checkout-sources)
+    copy-sources|checkout-sources|checkout-sources-git-marcweber)
 
       for repo in $ALL_REPOS; do
         target_realised "$T/$repo" || realise_repo $a $repo
@@ -232,7 +263,7 @@ if [ -e "$T/nixos" ] && [ -e "$T/nixpkgs" ] && [ -e "$T/configuration.nix" ]; th
   cat << EOF
     To realise your NixOS installtion execute:
 
-    run-in-chroot "/nix/store/nixos-bootstrap --install -j2 --keep-going"
+    bash $RUN_IN_CHROOT "/nix/store/nixos-bootstrap --install -j2 --keep-going"
 EOF
 else
   for t in "$T/configuration.nix" "$T/nixpkgs" "$T/configuration.nix"; do
