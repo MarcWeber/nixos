@@ -1,7 +1,7 @@
 args: with args;
 
 # TODO  add revision number or such
-runCommand "nixos-bootstrap-archive" { } ''
+runCommand "nixos-bootstrap-archive-${stdenv.system}" { } ''
   PATH=${perl}/bin:${coreutils}/bin:${gnutar}/bin:${bzip2}/bin
   storePaths=$(perl ${pathsFromGraph} ${nixClosure})
 
@@ -16,7 +16,7 @@ runCommand "nixos-bootstrap-archive" { } ''
       $(s ${runInChroot}/bin/run-in-chroot ) \
       $(s ${nixosBootstrap}/bin/nixos-bootstrap )
       
-  t=$out/nixos-install-archive.tar.xz
+  t=$out/nixos-install-archive-${stdenv.system}.tar.xz
   cat tmp.tar | ${xz}/bin/xz > $t
   ensureDir $out/nix-support
   echo "file tarball" $t > $out/nix-support/hydra-build-products
