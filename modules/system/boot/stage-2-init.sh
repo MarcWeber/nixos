@@ -155,12 +155,12 @@ $systemConfig/activate
 
 
 # Record the boot configuration.
-ln -sfn "$systemConfig" /var/run/booted-system
+ln -sfn "$systemConfig" /run/booted-system
 
 # Prevent the booted system form being garbage-collected If it weren't
 # a gcroot, if we were running a different kernel, switched system,
 # and garbage collected all, we could not load kernel modules anymore.
-ln -sfn /var/run/booted-system /nix/var/nix/gcroots/booted-system
+ln -sfn /run/booted-system /nix/var/nix/gcroots/booted-system
 
 
 # Run any user-specified commands.
@@ -189,4 +189,4 @@ fi
 
 # Start Upstart's init.
 echo "starting Upstart..."
-PATH=/var/run/current-system/upstart/sbin exec init --no-sessions ${debug2:+--verbose}
+PATH=/run/current-system/upstart/sbin exec init --no-sessions ${debug2:+--verbose}
