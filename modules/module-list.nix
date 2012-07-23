@@ -48,6 +48,7 @@
   ./programs/ssmtp.nix
   ./programs/wvdial.nix
   ./rename.nix
+  ./security/apparmor.nix
   ./security/ca.nix
   ./security/consolekit.nix
   ./security/pam.nix
