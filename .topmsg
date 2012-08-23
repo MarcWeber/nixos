@@ -1,0 +1,7 @@
+From: Marc Weber <marco-oweber@gmx.de>
+Subject: [PATCH] experimental/resources
+
+add a resources module preventing you from using resources such as
+uid,gid,TCP/IP ports multiple times by accident
+
+Signed-off-by: Marc Weber <marco-oweber@gmx.de>
