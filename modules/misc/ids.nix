@@ -131,4 +131,8 @@ in
     nogroup = 65534;
   };
 
+  resources =
+       (map (uid: {resource = "uid:${builtins.toString uid}"; }) (pkgs.lib.attrValues config.ids.uids))
+    ++ (map (gid: {resource = "gid:${builtins.toString gid}"; }) (pkgs.lib.attrValues config.ids.gids));
+
 }

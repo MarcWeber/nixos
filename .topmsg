@@ -4,4 +4,7 @@ Subject: [PATCH] experimental/resources
 add a resources module preventing you from using resources such as
 uid,gid,TCP/IP ports multiple times by accident
 
+TODO:
+make httpd etc support it
+
 Signed-off-by: Marc Weber <marco-oweber@gmx.de>
