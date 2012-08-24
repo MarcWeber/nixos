@@ -105,7 +105,7 @@ else {
     ";
 
     if ($splashImage) {
-	# FIXME: GRUB 1.97 doesn't resize the background image if it
+        # FIXME: GRUB 1.97 doesn't resize the background image if it
         # doesn't match the video resolution.
         copy $splashImage, "/boot/background.png" or die "cannot copy $splashImage to /boot\n";
         $conf .= "
@@ -154,7 +154,7 @@ sub addEntry {
 
     my $kernel = copyToKernelsDir(Cwd::abs_path("$path/kernel"));
     my $initrd = copyToKernelsDir(Cwd::abs_path("$path/initrd"));
-    my $xen = -e "$path/xen.gz" ? copyToKernelsDir(Cwd::abs_path("$path/xen")) : undef;
+    my $xen = -e "$path/xen.gz" ? copyToKernelsDir(Cwd::abs_path("$path/xen.gz")) : undef;
 
     # FIXME: $confName
 
@@ -193,7 +193,7 @@ $conf .= "$extraEntries\n" unless $extraEntriesBeforeNixOS;
 $conf .= "submenu \"NixOS - Old configurations\" {\n" if $grubVersion == 2;
 
 sub nrFromGen { my ($x) = @_; $x =~ /system-(.*)-link/; return $1; }
-    
+
 my @links = sort
     { nrFromGen($b) <=> nrFromGen($a) }
     (glob "/nix/var/nix/profiles/system-*-link");
