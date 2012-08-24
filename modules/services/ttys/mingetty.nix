@@ -69,6 +69,8 @@ with pkgs.lib;
 
       exec = "mingetty --loginprog=${pkgs.shadow}/bin/login --noclear ${tty}";
 
+      restartIfChanged = false;
+
       environment.LOCALE_ARCHIVE = "/run/current-system/sw/lib/locale/locale-archive";
 
     }) config.services.mingetty.ttys);
