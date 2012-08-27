@@ -169,8 +169,8 @@ in
       # actually a shell script.
       envVars = mkOption {
         internal = true;
-        default = "";
-        type = types.string;
+        default = [""];
+        type = types.shellCode config.environment.supportedShells;
         description = "
           Environment variables used by Nix.
         ";
@@ -247,7 +247,8 @@ in
 
         script =
           ''
-            ${config.nix.envVars}
+            export PATH=${if config.nix.distributedBuilds then "${pkgs.openssh}/bin:${pkgs.gzip}/bin:" else ""}${pkgs.openssl}/bin:${nix}/bin:$PATH
+            ${config.nix.envVars.bash}
             exec \
               nice -n ${builtins.toString config.nix.daemonNiceLevel} \
               ionice -n ${builtins.toString config.nix.daemonIONiceLevel} \
@@ -261,10 +262,11 @@ in
       };
 
     environment.shellInit =
-      ''
+      [ ''
         # Set up the environment variables for running Nix.
-        ${config.nix.envVars}
-
+        ''
+        config.nix.envVars
+        ''
         # Set up secure multi-user builds: non-root users build through the
         # Nix daemon.
         if test "$USER" != root; then
@@ -272,9 +274,10 @@ in
         else
             export NIX_REMOTE=
         fi
-      '';
+      ''
+      ];
 
-    nix.envVars =
+    nix.envVars = [
       ''
         export NIX_CONF_DIR=/etc/nix
 
@@ -282,19 +285,23 @@ in
         # to be sped up by copying build results from remote Nix stores.  To
         # do this, mount the remote file system on a subdirectory of
         # /var/run/nix/remote-stores.
-        export NIX_OTHER_STORES=/var/run/nix/remote-stores/*/nix
-      '' # */
-      + optionalString config.nix.distributedBuilds ''
+      ''
+      { bash = ''export NIX_OTHER_STORES=/var/run/nix/remote-stores/*/nix'';
+        zsh  = ''export NIX_OTHER_STORES=$(setopt nullglob; echo /var/run/nix/remote-stores/*/nix)'';
+      }
+      # */
+      ( optionalString config.nix.distributedBuilds ''
         export NIX_BUILD_HOOK=${config.environment.nix}/libexec/nix/build-remote.pl
         export NIX_REMOTE_SYSTEMS=/etc/nix.machines
         export NIX_CURRENT_LOAD=/var/run/nix/current-load
-      ''
+      '')
       # !!! These should not be defined here, but in some general proxy configuration module!
-      + optionalString (config.nix.proxy != "") ''
+      ( optionalString (config.nix.proxy != "") ''
         export http_proxy=${config.nix.proxy}
         export https_proxy=${config.nix.proxy}
         export ftp_proxy=${config.nix.proxy}
-      '';
+      '')
+    ];
 
     users.extraUsers = map makeNixBuildUser (range 1 config.nix.nrBuildUsers);
 
