@@ -16,6 +16,7 @@
   ./config/users-groups.nix
   ./hardware/all-firmware.nix
   ./hardware/cpu/intel-microcode.nix
+  ./hardware/cpu/amd-microcode.nix
   ./hardware/network/b43.nix
   ./hardware/network/intel-2100bg.nix
   ./hardware/network/intel-2200bg.nix
@@ -86,7 +87,6 @@
   ./services/logging/logstash.nix
   ./services/logging/syslogd.nix
   ./services/mail/dovecot.nix
-  ./services/mail/dovecot2.nix
   ./services/mail/freepops.nix
   ./services/mail/mail.nix
   ./services/mail/postfix.nix

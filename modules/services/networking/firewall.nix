@@ -33,9 +33,20 @@ let
       # Helper command to manipulate both the IPv4 and IPv6 tables.
       ip46tables() {
         iptables "$@"
-        ip6tables "$@"
+        ${optionalString config.networking.enableIPv6 ''
+          ip6tables "$@"
+        ''}
       }
     '';
+
+  kernelPackages = config.boot.kernelPackages;
+  kernelHasRPFilter = kernelPackages.kernel ? features
+                   && kernelPackages.kernel.features ? netfilterRPFilter
+                   && kernelPackages.kernel.features.netfilterRPFilter;
+
+  kernelCanDisableHelpers = kernelPackages.kernel ? features
+                   && kernelPackages.kernel.features ? canDisableNetfilterConntrackHelpers
+                   && kernelPackages.kernel.features.canDisableNetfilterConntrackHelpers;
 
 in
 
@@ -96,6 +107,15 @@ in
         '';
     };
 
+    networking.firewall.trustedInterfaces = mkOption {
+      type = types.list types.string;
+      description =
+        ''
+          Traffic coming in from these interfaces will be accepted
+          unconditionally.
+        '';
+    };
+
     networking.firewall.allowedTCPPorts = mkOption {
       default = [];
       example = [ 22 80 ];
@@ -129,6 +149,53 @@ in
         '';
     };
 
+    networking.firewall.checkReversePath = mkOption {
+      default = kernelHasRPFilter;
+      type = types.bool;
+      description =
+        ''
+          Performs a reverse path filter test on a packet.
+          If a reply to the packet would not be sent via the same interface
+          that the packet arrived on, it is refused.
+
+          If using asymmetric routing or other complicated routing,
+          disable this setting and setup your own counter-measures.
+
+          (needs kernel 3.3+)
+        '';
+    };
+
+    networking.firewall.connectionTrackingModules = mkOption {
+      default = [ "ftp" ];
+      example = [ "ftp" "irc" "sane" "sip" "tftp" "amanda" "h323" "netbios_sn" "pptp" "snmp" ];
+      type = types.list types.string;
+      description =
+        ''
+          List of connection-tracking helpers that are auto-loaded.
+          The complete list of possible values is given in the example.
+
+          As helpers can pose as a security risk, it is adviced to
+          set this to an empty list and disable the setting
+          networking.firewall.autoLoadConntrackHelpers
+
+          Loading of helpers is recommended to be done through the new
+          CT target. More info:
+          https://home.regit.org/netfilter-en/secure-use-of-helpers/
+        '';
+    };
+
+    networking.firewall.autoLoadConntrackHelpers = mkOption {
+      default = true;
+      type = types.bool;
+      description =
+        ''
+          Whether to auto-load connection-tracking helpers.
+          See the description at networking.firewall.connectionTrackingModules
+
+          (needs kernel 3.5+)
+        '';
+    };
+
     networking.firewall.extraCommands = mkOption {
       default = "";
       example = "iptables -A INPUT -p icmp -j ACCEPT";
@@ -153,9 +220,20 @@ in
   # holds).
   config = mkIf cfg.enable {
 
+    networking.firewall.trustedInterfaces = [ "lo" ];
+
     environment.systemPackages = [ pkgs.iptables ];
 
-    boot.kernelModules = [ "nf_conntrack_ftp" ];
+    boot.kernelModules = map (x: "nf_conntrack_${x}") cfg.connectionTrackingModules;
+    boot.extraModprobeConfig = optionalString (!cfg.autoLoadConntrackHelpers) ''
+      options nf_conntrack nf_conntrack_helper=0
+    '';
+
+    assertions = [ { assertion = ! cfg.checkReversePath || kernelHasRPFilter;
+                     message = "This kernel does not support rpfilter"; }
+                   { assertion = cfg.autoLoadConntrackHelpers || kernelCanDisableHelpers;
+                     message = "This kernel does not support disabling conntrack helpers"; }
+                 ];
 
     jobs.firewall =
       { startOn = "started network-interfaces";
@@ -220,8 +298,16 @@ in
             # The "nixos-fw" chain does the actual work.
             ip46tables -N nixos-fw
 
-            # Accept all traffic on the loopback interface.
-            ip46tables -A nixos-fw -i lo -j nixos-fw-accept
+            # Perform a reverse-path test to refuse spoofers
+            # For now, we just drop, as the raw table doesn't have a log-refuse yet
+            ${optionalString (kernelHasRPFilter && cfg.checkReversePath) ''
+              ip46tables -A PREROUTING -t raw -m rpfilter --invert -j DROP
+            ''}
+
+            # Accept all traffic on the trusted interfaces.
+            ${flip concatMapStrings cfg.trustedInterfaces (iface: ''
+              ip46tables -A nixos-fw -i ${iface} -j nixos-fw-accept
+            '')}
 
             # Accept packets from established or related connections.
             ip46tables -A nixos-fw -m conntrack --ctstate ESTABLISHED,RELATED -j nixos-fw-accept
