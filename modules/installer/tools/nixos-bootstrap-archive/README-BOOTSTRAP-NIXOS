@@ -1,0 +1,46 @@
+HOWTO install NixOS from a bootstrap archive
+=============================================
+
+
+
+=== STEP 0)
+# export your installation target path (which is usually a mount point but can
+# be a directory for testing purposes)
+
+  export mountPoint=/mnt # defaults to /mnt
+  tar xJf $THIS_ARCHIVE -C $mountPoint 
+
+=== STEP 1)
+# prepare by checkout out nixos/nixpkgs and providing configuration.nix
+# Also register minimal set of paths as valid and create /bin/sh symlink:
+
+  # see --help to learn more about those steps
+  bash $mountPoint/nix/store/nixos-prepare-install copy-nix guess-config checkout-sources-git-marcweber
+  # ignore the warnings that you should not edit the generated file mountPoint/etc/nixos/configuration.nix
+
+
+=== STEP 2)
+# adjust / create the your nixos configuration file:
+
+  $EDITOR $mountPoint/etc/nixos/configuration.nix
+
+=== STEP 3)
+# you can replace --install by --help to get more info, eg --fast omits
+# fetching manifest. -j X runs multiple builds in parallel and --fallback
+# can work around some failing downloads found in manifests and such
+# use --no-grub to not install grub
+
+  bash $mountPoint/nix/store/run-in-chroot "/nix/store/nixos-bootstrap --install --show-trace"
+
+==== TROUBLE ?:
+If you have trouble contact marco-oweber@gmx.de who is maintaining this way of
+installing nixos
+
+
+=== HINTS:
+For most server systems you may want to give this nixos option a try:
+    boot.loader.initScript.enable = true
+It provides /sbin/init. That file contain pointers to the older configurations
+because there is no grub menu. So you have to switch back manually when necessary.
+In that case just use fileSystems = []; because the virtualization system mounts root
+in most cases.
