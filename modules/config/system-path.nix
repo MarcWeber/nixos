@@ -16,9 +16,7 @@ let
     '';
 
   requiredPackages =
-    [ config.system.sbin.modprobe # must take precedence over module_init_tools
-      config.system.build.upstart
-      config.environment.nix
+    [ config.environment.nix
       pkgs.acl
       pkgs.attr
       pkgs.bashInteractive # bash with ncurses support
@@ -39,7 +37,6 @@ let
       pkgs.less
       pkgs.libcap
       pkgs.man
-      pkgs.module_init_tools
       pkgs.nano
       pkgs.ncurses
       pkgs.netcat
@@ -50,10 +47,8 @@ let
       pkgs.procps
       pkgs.rsync
       pkgs.strace
-      pkgs.sysklogd
       pkgs.sysvtools
       pkgs.time
-      pkgs.udev
       pkgs.usbutils
       pkgs.utillinux
       extraManpages      
@@ -111,6 +106,10 @@ let
 
               if [ -x $out/bin/gtk-update-icon-cache -a -f $out/share/icons/hicolor/index.theme ]; then
                   $out/bin/gtk-update-icon-cache $out/share/icons/hicolor
+              fi
+
+              if [ -x $out/bin/glib-compile-schemas -a -w $out/share/glib-2.0/schemas ]; then
+                  $out/bin/glib-compile-schemas $out/share/glib-2.0/schemas
               fi
             '';
         };
