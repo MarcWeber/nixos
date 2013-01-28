@@ -21,5 +21,12 @@ with pkgs.lib;
   };
 
   config = {
+    environment.shellAliases =
+      { ls = "ls --color=tty";
+        ll = "ls -l";
+        l = "ls -alh";
+        # see bash.nix, type -P does not exist for zsh
+        # which = "type -P";
+      };
   };
 }

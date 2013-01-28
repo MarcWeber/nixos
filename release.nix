@@ -198,6 +198,11 @@ let
     */
 
 
+    # Hacky: doesn't depend on configuration. Yet configuration is evaluated (TODO)
+    minimal_install_archive = { system ? builtins.currentSystem }:
+      (iso_minimal {inherit system;})
+      .config.system.build.minimalInstallArchive;
+
     tests = { system ? "x86_64-linux" }:
       let
         t = import ./tests { inherit system; };
