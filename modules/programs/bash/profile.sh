@@ -11,6 +11,7 @@ __ETC_PROFILE_SOURCED=1
 source @nixBashLib@
 
 # Prevent this file from being sourced by interactive non-login child shells.
+if [ -n "$__ETC_PROFILE_DONE" ]; then return; fi
 export __ETC_PROFILE_DONE=1
 
 # Initialise a bunch of environment variables.

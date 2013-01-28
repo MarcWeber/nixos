@@ -14,7 +14,7 @@ let
   cfg = config.environment.zsh;
 
   shellAliases = concatStringsSep "\n" (
-    mapAttrsFlatten (k: v: "alias ${k}='${v}'") config.environment.shellAliases
+    mapAttrsFlatten (k: v: "alias ${k}='${v}'") cfg.shellAliases
   );
 
   usedFeatures = builtins.listToAttrs (map (name: {inherit name; value = getAttr name cfg.availableFeatures; }) cfg.usedFeatures);
@@ -117,6 +117,15 @@ let
       '';
     };
 
+    environment.zsh.shellAliases = mkOption {
+      type = types.attrs; # types.attrsOf types.stringOrPath;
+      default = {};
+      description = ''
+        zsh specific shell aliases. global shell aliases are merged into this attrs.
+        See environment.shellAliases.
+      '';
+    };
+
 
   };
 
@@ -163,7 +172,10 @@ in
 
       ];
 
+
     environment.systemPackages = [ pkgs.zsh ];
+
+    environment.zsh.shellAliases = config.environment.shellAliases;
 
     environment.zsh.availableFeatures = {
 

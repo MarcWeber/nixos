@@ -39,7 +39,7 @@ let
   cfg = config.environment.bash;
 
   shellAliases = concatStringsSep "\n" (
-    mapAttrsFlatten (k: v: "alias ${k}='${v}'") config.environment.shellAliases
+    mapAttrsFlatten (k: v: "alias ${k}='${v}'") cfg.shellAliases
   );
 
   usedFeatures = builtins.listToAttrs (map (name: {inherit name; value = getAttr name cfg.availableFeatures; }) cfg.usedFeatures);
@@ -87,7 +87,7 @@ let
   options = {
 
     # TODO: move into bash namespace?
-    environment.promptInit =  mkOption {
+    environment.promptInit = mkOption {
       default = ''
         # Provide a nice prompt.
         PROMPT_COLOR="1;31m"
@@ -149,6 +149,14 @@ let
         if you're not satisfied by system default.
       '';
     };
+    environment.bash.shellAliases = mkOption {
+      type = types.attrs; # types.attrsOf types.stringOrPath;
+      default = {};
+      description = ''
+        bash specific shell aliases. global shell aliases are merged into this attrs.
+        See environment.shellAliases.
+      '';
+    };
 
   };
 
@@ -205,16 +213,12 @@ in
 
     ];
 
-  environment.shellAliases =
-    { ls = "ls --color=tty";
-      ll = "ls -l";
-      l = "ls -alh";
-      which = "type -P";
-    };
+  environment.bash.shellAliases = config.shellAliases
+    // {which = "type -P"; };
 
   environment.bash.availableFeatures = {
 
-    aliases.interactive_code = shellAliases;
+    environment.zsh.shellAliases = config.environment.shellAliases;
 
     other.interactive_code = ''
       # Check the window size after every command.

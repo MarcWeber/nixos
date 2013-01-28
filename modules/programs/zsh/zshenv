@@ -7,6 +7,7 @@ __ETC_PROFILE_SOURCED=1
 source @nixZshLib@
 
 # Prevent this file from being sourced by interactive non-login child shells.
+if [ -n "$__ETC_PROFILE_DONE" ]; then return; fi
 export __ETC_PROFILE_DONE=1
 
 # Initialise a bunch of environment variables.
@@ -16,7 +17,6 @@ export NIXPKGS_CONFIG=/etc/nix/nixpkgs-config.nix
 export NIX_PATH=/nix/var/nix/profiles/per-user/root/channels/nixos:nixpkgs=/etc/nixos/nixpkgs:nixos=/etc/nixos/nixos:nixos-config=/etc/nixos/configuration.nix:services=/etc/nixos/services
 export PAGER="less -R"
 export EDITOR=nano
-export LOCATE_PATH=/var/cache/locatedb
 
 # Include the various profiles in the appropriate environment variables.
 export NIX_USER_PROFILE_DIR=/nix/var/nix/profiles/per-user/$USER

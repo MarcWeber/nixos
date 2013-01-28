@@ -20,6 +20,8 @@ bash setup changes:
 - introduce nix-bash-lib which provides some helper functions.
   It is sourced as needed.
 
+- export __ETC_PROFILE_DONE, so that profile isn't setup twice
+
 zsh:
   implement the very same.
   Please note that the zshrc hack found in nixpkgs is obsolete now.
