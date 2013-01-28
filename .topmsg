@@ -20,5 +20,10 @@ bash setup changes:
 - introduce nix-bash-lib which provides some helper functions.
   It is sourced as needed.
 
-TODO: provide a zsh implementation
+zsh:
+  implement the very same.
+  Please note that the zshrc hack found in nixpkgs is obsolete now.
+
+TODO: provide other implementations (fish etc)
+
 Signed-off-by: Marc Weber <marco-oweber@gmx.de>
