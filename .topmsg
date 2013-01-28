@@ -1,29 +1,6 @@
 From: Marc Weber <marco-oweber@gmx.de>
-Subject: [PATCH] systemd/multi-shell-support
+Subject: [PATCH] systemd/marc
 
-bash setup changes:
-
-- new option environment.bashFeatures modularizing bash setup
-  implementations based on previous code: prompt, completion, aliases, other
-
-- provide /etc/bash/setup-all shell scripts setting those features up
-  You can opt out by defining keys in DID_NIX_BASH_FEATURES, use declare -A
-  first (see comment)
-
-- provide /etc/skel/.bashrc which by default sources source-all
-  This way users can opt-out. Mind that I wrote a shadow patch so that user-add
-  creates ~/.bashrc as file, not as symlink
-
-- support XML_CATALOG_FILES, so that you can use xmllint like tools without
-  having them download dts easily
-
-- introduce nix-bash-lib which provides some helper functions.
-  It is sourced as needed.
-
-zsh:
-  implement the very same.
-  Please note that the zshrc hack found in nixpkgs is obsolete now.
-
-TODO: provide other implementations (fish etc)
+merge of my topic branches ported to systemd
 
 Signed-off-by: Marc Weber <marco-oweber@gmx.de>
