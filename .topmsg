@@ -1,99 +1,24 @@
 From: Marc Weber <marco-oweber@gmx.de>
 Subject: [PATCH] systemd/multi-shell-support
 
-experimental/multi-shell-support
+bash setup changes:
 
-nixos multi shell support and some improvements:
-- Setup nix related vars always but only once. If NIX_DID_SHELL_INIT is
-  set env vars won't be changed when running a subshell by typing zsh, bash
+- new option environment.bashFeatures modularizing bash setup
+  implementations based on previous code: prompt, completion, aliases, other
 
-  Note: upstream this has been fixed by introducuing __ETC_PROFILE_DONE instead
+- provide /etc/bash/setup-all shell scripts setting those features up
+  You can opt out by defining keys in DID_NIX_BASH_FEATURES, use declare -A
+  first (see comment)
 
-- put system configuration in /etc scripts which are sourced by ~/.bashrc
-  ~/.zshrc - but the user can either set options before doing so or
-  opt-out (by not sourcing the system defaults)
+- provide /etc/skel/.bashrc which by default sources source-all
+  This way users can opt-out. Mind that I wrote a shadow patch so that user-add
+  creates ~/.bashrc as file, not as symlink
 
-Thus if you modify PATH modification will be kept unless you start a
-login (bash/zsh -l) shell. This seems to be the default on other systems.
+- support XML_CATALOG_FILES, so that you can use xmllint like tools without
+  having them download dts easily
 
-bash specific changes:
-======================
+- introduce nix-bash-lib which provides some helper functions.
+  It is sourced as needed.
 
-  bash has the behaviour of either sourcing /etc/profile or /etc/bashrc.
-  However you want PATH to be set in both cases
-  - non login case: scp connects and wants to start scp
-  - login case: you connect using ssh
-  Thus /etc/profile and /etc/bashrc have almost the same contents.
-  The profile script also setups the nix account.
-
-  The same applies for ~/.profile (or ~/.bash_profile) and ~/.bashrc.
-  Thus they both should execute the same code which was implemented
-  by ~/.bash_profile sourcing ~/.bashrc which is common behaviour on
-  other distros according to Isaac Dupree
-
-  NEW COMPLETION SUPPORT:
-  The default is to source /etc/bash-user-system-default.sh which sets
-  up completion - without the annoying scripts. Eg upstart and git are
-  supported. The user can opt-out from individual scripts by using a
-  bash hash - or by simple dropping the line sourcing the script in
-  ~/.bashrc
-
-  Note: Upstream /etc/profile, /etc/bashrc conditionally source each other.
-  While it also works I think its little bit hacky.
-
-zsh specific changes:
-=====================
-  setup looks similar - but contrast to bash the /etc and ~ .zshrc files
-  are always sourced - thus the same setup is simpler and requires less
-  files.
-
-  This makes the zsh patch in nixpkgs obsolote. Sourcing /etc/profile
-  emulating bash is no longer necessary because /etc/zshenv do this job
-
-The /etc/{zsh,bash}-user-system-defaults.{sh,zsh} files now contain a
-section which can be configured by configuration.nix which is only run
-in interactive shells. This is the place to define EDITOR env vars,
-aliases for ls etc.
-
-Unfortunately zsh and bash (and the other shells which somebody may want
-to support in the future) have much but not enough in common. Thus a lot
-of duplication has to take place - even in .nix files.
-
-In order to make this as convenient as possible a mergeShellCodeOption
-is introduced in nixpkgs which allows you to write shell code in
-configuration files like this:
-
-  environment.interactiveShellInit = [
-    ''
-    # common code
-    ''
-    {
-      bash = " for x in $VAR; do ...     ";
-      zsh  = " for x in ${=VAR}; do ...  ";
-    }
-    ''
-    # more common code
-    ''
-  ];
-
-and the zsh / bash parts will be picked up accordingly - if attr name is
-missing you should get a nice error message.
-
-A new option type shellcode has been added to options.nix. Because the
-default setting gets not merged it was necessary to use the apply
-function which can now be used in option types as well.
-
-Because I expect that most users use bash zsh is optional. Enable zsh
-support by
-
-    environment.supportedShells = [ "bash" "zsh" ];
-
-Maybe this can all be done better. But its the first step towards supporting
-many different shells.
-
-This also adds nix-query-packages and nix-install-packages.
-Yes - I agree: users should add this to their own .bashrc or .zshrc file.
-However its my time asking new users to get or install package x or y.
-
-TODO: update
+TODO: provide a zsh implementation
 Signed-off-by: Marc Weber <marco-oweber@gmx.de>

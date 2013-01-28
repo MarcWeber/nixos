@@ -8,6 +8,8 @@
 if [ -n "$__ETC_PROFILE_SOURCED" ]; then return; fi
 __ETC_PROFILE_SOURCED=1
 
+source @nixBashLib@
+
 # Prevent this file from being sourced by interactive non-login child shells.
 export __ETC_PROFILE_DONE=1
 
@@ -22,41 +24,15 @@ export LOCATE_PATH=/var/cache/locatedb
 
 # Include the various profiles in the appropriate environment variables.
 export NIX_USER_PROFILE_DIR=/nix/var/nix/profiles/per-user/$USER
-export NIX_PROFILES="/run/current-system/sw /nix/var/nix/profiles/default $HOME/.nix-profile"
+# put most important first
+export NIX_PROFILES="$HOME/.nix-profile /nix/var/nix/profiles/default /run/current-system/sw"
 
 unset PATH INFOPATH PKG_CONFIG_PATH PERL5LIB ALSA_PLUGIN_DIRS GST_PLUGIN_PATH KDEDIRS
 unset QT_PLUGIN_PATH QTWEBKIT_PLUGIN_PATH STRIGI_PLUGIN_PATH XDG_CONFIG_DIRS XDG_DATA_DIRS
 unset MOZ_PLUGIN_PATH TERMINFO_DIRS
 
-for i in $NIX_PROFILES; do # !!! reverse
-    # We have to care not leaving an empty PATH element, because that means '.' to Linux
-    export PATH=$i/bin:$i/sbin:$i/lib/kde4/libexec${PATH:+:}$PATH
-    export INFOPATH=$i/info:$i/share/info${INFOPATH:+:}$INFOPATH
-    export PKG_CONFIG_PATH="$i/lib/pkgconfig${PKG_CONFIG_PATH:+:}$PKG_CONFIG_PATH"
-
-    # terminfo and reset TERM with new TERMINFO available
-    export TERMINFO_DIRS=$i/share/terminfo${TERMINFO_DIRS:+:}$TERMINFO_DIRS
-    export TERM=$TERM
-
-    export PERL5LIB="$i/lib/perl5/site_perl${PERL5LIB:+:}$PERL5LIB"
-
-    # ALSA plugins
-    export ALSA_PLUGIN_DIRS="$i/lib/alsa-lib${ALSA_PLUGIN_DIRS:+:}$ALSA_PLUGIN_DIRS"
-
-    # GStreamer.
-    export GST_PLUGIN_PATH="$i/lib/gstreamer-0.10${GST_PLUGIN_PATH:+:}$GST_PLUGIN_PATH"
-
-    # KDE/Gnome stuff.
-    export KDEDIRS=$i${KDEDIRS:+:}$KDEDIRS
-    export STRIGI_PLUGIN_PATH=$i/lib/strigi/${STRIGI_PLUGIN_PATH:+:}$STRIGI_PLUGIN_PATH
-    export QT_PLUGIN_PATH=$i/lib/qt4/plugins:$i/lib/kde4/plugins${QT_PLUGIN_PATH:+:}:$QT_PLUGIN_PATH
-    export QTWEBKIT_PLUGIN_PATH=$i/lib/mozilla/plugins/${QTWEBKIT_PLUGIN_PATH:+:}$QTWEBKIT_PLUGIN_PATH
-    export XDG_CONFIG_DIRS=$i/etc/xdg${XDG_CONFIG_DIRS:+:}$XDG_CONFIG_DIRS
-    export XDG_DATA_DIRS=$i/share${XDG_DATA_DIRS:+:}$XDG_DATA_DIRS
-
-    # Mozilla plugins.
-    export MOZ_PLUGIN_PATH=$i/lib/mozilla/plugins${MOZ_PLUGIN_PATH:+:}$MOZ_PLUGIN_PATH
-done
+# populate env vars based on profiles
+nix_foreach_profile "nix_add_profile_vars nix_export_suffix"
 
 # Search directory for Aspell dictionaries.
 export ASPELL_CONF="dict-dir $HOME/.nix-profile/lib/aspell"

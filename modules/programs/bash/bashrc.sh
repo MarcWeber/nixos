@@ -12,13 +12,3 @@ __ETC_BASHRC_SOURCED=1
 if [ -z "$__ETC_PROFILE_DONE" ]; then
     . /etc/profile
 fi
-
-# We are not always an interactive shell.
-if [ -z "$PS1" ]; then return; fi
-
-# Check the window size after every command.
-shopt -s checkwinsize
-
-@promptInit@
-@initBashCompletion@
-@shellAliases@
