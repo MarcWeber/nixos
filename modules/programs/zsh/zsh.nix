@@ -184,18 +184,23 @@ in
       other.interactive_code = ''
         # Check the window size after every command.
         setopt CORRECT
-        setopt share_history
         setopt hist_ignore_dups
         setopt PROMPT_SUBST
 
         # beeping is annoying
         setopt NO_HIST_BEEP
         setopt NO_BEEP
+
+        # history setup - maybe 20000 lines is much
+        setopt share_history
+        HISTFILE=~/.histfile
+        HISTSIZE=20000
+        SAVEHIST=20000
       '';
 
       promptInit.interactive_code = config.environment.zsh.promptInit;
 
-      # TODO: is it a good idea to always provide pkgs.bashCompletion ?
+      # TODO: is it a good idea to always provide pkgs.zshCompletion ?
       # how does it compare with completion provided by the bash sample code ?
       completion.interactive_code = ''
           if ${if config.environment.zsh.enableCompletion then "true" else "false" }; then
