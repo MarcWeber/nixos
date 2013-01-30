@@ -59,7 +59,8 @@ let
       inherit nixClosure nix;
 
       # TODO shell ?
-      nixosURL = cfg.nixosURL;
+      nixosURL = if  cfg ? nixosURL then cfg.nixosURL else "installer.nixosURL was not defined at buildtime";
+
     };
 
     # see ./nixos-bootstrap-archive/README-BOOTSTRAP-NIXOS
