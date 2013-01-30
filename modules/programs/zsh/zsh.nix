@@ -72,8 +72,9 @@ let
 
     environment.zsh.promptInit =  mkOption {
       default = "
-        PS1=\"\\\${fg[red]}\\\$(basename \\\"\\\${PWD}\\\") %%\"
-        RPS2=\"\\\${fg[black]}\\\${PWD} %m\"
+        PS1=\"%n@%M \\\$(basename \\\"\\\${PWD}\\\") %? %#\"
+
+        RPS2=\"%?\\\${fg[black]}\\\${PWD} %m\"
       ";
       description = "
         Script used to initialized zsh shell prompt.
