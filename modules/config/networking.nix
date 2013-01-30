@@ -10,6 +10,14 @@ let
 
   options = {
 
+    networking.manualHosts = pkgs.lib.mkOption {
+      default = false;
+      description = ''
+        when set to true /etc/hosts.sample will be written. Then its your task
+        to provide /etc/hosts
+      '';
+    };
+
     networking.extraHosts = pkgs.lib.mkOption {
       default = "";
       example = "192.168.0.1 lanlocalhost";
@@ -62,7 +70,7 @@ in
             ''}
             ${cfg.extraHosts}
           '';
-        target = "hosts";
+        target = "hosts${optionalString cfg.manualHosts  ".sample"}";
       }
 
       { # /etc/resolvconf.conf: Configuration for openresolv.
