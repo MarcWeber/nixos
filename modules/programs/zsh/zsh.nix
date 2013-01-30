@@ -72,7 +72,7 @@ let
 
     environment.zsh.promptInit =  mkOption {
       default = "
-        PS1=\"\\\${fg[red]}\\\$(basename \\\"\\\${PWD}\\\")\"
+        PS1=\"\\\${fg[red]}\\\$(basename \\\"\\\${PWD}\\\") %%\"
         RPS2=\"\\\${fg[black]}\\\${PWD} %m\"
       ";
       description = "
