@@ -208,7 +208,7 @@ in
           autoload -Uz compinit; compinit
           # nix-env always uses pager :( TODO: make it behave like git diff:
           # don't show pager when using a pipe
-          compdef _gnu_generic nix-store nix-instantiate nix-env nix-build
+          compdef _gnu_generic nix-{store,instantiate,channel,env,build}
           PATH=$PATH:@gnugrep@/bin compinit
           fi
         '';
