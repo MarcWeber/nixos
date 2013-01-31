@@ -1,0 +1,21 @@
+From: Marc Weber <marco-oweber@gmx.de>
+Subject: [PATCH] systemd/php-fpm
+
+php-fpm support, 
+
+requires:
+  - requires hash patch (nix)
+    github.com/MarcWeber/nix/tree/experimental/hash
+    (also found in github.com/MarcWeber/nixpkgs branch experimental/nix)
+
+  - requires patches to PHP
+    github.com/MarcWeber/nix/tree/experimental/php
+    can't feed upstream because it depends on
+    branch experimental/multiple-versions-in-one-file
+
+  - maybe a security review should be done.
+    Works for me.
+
+TODO: add usage sample
+
+Signed-off-by: Marc Weber <marco-oweber@gmx.de>
