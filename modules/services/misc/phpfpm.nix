@@ -114,7 +114,9 @@ in {
 
       socketPathFun = mkOption {
         description = "Function returning socket path by pool to which web servers connect to.";
-        default = pool: "/dev/shm/php-fpm-${cfg.idFun pool}";
+        default = pool:
+          let pool_h = builtins.substring 0 8 (builtins.hash "sha256" (builtins.toXML pool.pool));
+          in "/dev/shm/php-fpm-${cfg.idFun pool}-${pool_h}";
       };
 
       pools = mkOption {
