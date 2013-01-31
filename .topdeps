@@ -3,3 +3,4 @@ systemd/virtualbox-server
 master
 experimental/minimal-install-archive
 systemd/php-fpm
+systemd/postfix
