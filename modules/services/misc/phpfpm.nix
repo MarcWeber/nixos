@@ -37,7 +37,7 @@ let
         };
       phpIniLines =
           xd.phpIniLines
-          + pool.phpIniLines;
+          + (pool.phpIniLines or "");
 
 
       # using phpIniLines create a cfg-id
@@ -72,8 +72,8 @@ let
                    emergency_restart_threshold = "10";
                    emergency_restart_interval = "1m";
                    process_control_timeout = "5s";
-                   jobName = "php-fpm-${h.php.id}";
                    phpIni =  h.phpIni;
+                   inherit (h) id;
                  }
                  # pools
                  (map (p:
@@ -109,7 +109,7 @@ in {
 
       idFun = mkOption {
         description = "Function returning service name based on php compilation options, php ini file";
-        default = pool: cfg.preparePool.id;
+        default = pool: (preparePool pool).id;
       };
 
       socketPathFun = mkOption {
