@@ -16,6 +16,79 @@ requires:
   - maybe a security review should be done.
     Works for me.
 
-TODO: add usage sample
+lazy usage examlpe:
+
+    let
+
+        phpfpmPools = 
+        let environment = {
+          # LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive";
+        };
+        in {
+            "php54" = {
+              php = pkgs.php5_4fpm;
+              id = "5.4";
+              pool = {
+               inherit environment;
+               user  = "user";
+               group  = "users"; 
+               listen = { owner = config.services.httpd.user; group = config.services.httpd.group; mode = "0700"; };
+               slowlog = "/pr/www/slow-log-5.4";
+              };
+            };
+            "php53" = rec {
+              php = pkgs.php5_3fpm;
+              id = "php-fpm-5.3";
+              pool = {
+               # inherit environment;
+               user  = "user";
+               group  = "users"; 
+               listen = { owner = config.services.httpd.user; group = config.services.httpd.group; mode = "0700"; };
+               slowlog = "/pr/www/slow-log-5.3";
+            };
+        };
+
+    in 
+
+    {pkgs , config, ...} : {
+
+      services.phpfpm.pools = lib.attrValues phpfpmPools; 
+
+      httpd.extraConfig = ''
+          FastCGIExternalServer /dev/shm/php5.3.fcgi -socket ${config.services.phpfpm.socketPathFun phpfpmPools.php53} -flush -idle-timeout 300
+          FastCGIExternalServer /dev/shm/php5.4.fcgi -socket ${config.services.phpfpm.socketPathFun phpfpmPools.php54} -flush -idle-timeout 300
+      '';
+
+      httpd.virtualHosts = 
+           (
+           map (php: let documentRoot = "/pr/www"; in {
+             enable = true;
+             documentRoot = documentRoot;
+             hostName = php.domain;
+            extraConfig = ''
+            RewriteEngine On
+
+            AddType application/x-httpd-php .php
+            AddType application/x-httpd-php .php5
+            Action application/x-httpd-php /x/php.fcgi
+            Alias /x/php.fcgi /dev/shm/php${php.version}.fcgi
+
+            <Directory ${documentRoot}>
+               DirectoryIndex index.php index.html
+               Options +ExecCGI
+               Order allow,deny
+               Allow from all
+               AllowOverride All
+            </Directory>
+
+            '';
+           }) [
+            { domain = "php53"; version = "5.3"; }
+            { domain = "php54"; version = "5.4"; }
+           ]  
+           );
+
+    }
+
 
 Signed-off-by: Marc Weber <marco-oweber@gmx.de>
