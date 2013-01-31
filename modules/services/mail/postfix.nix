@@ -26,33 +26,25 @@ let
         text = concatMapStrings (key_v: "${head key_v} ${head (tail key_v)}\n") list;
     in writeText "postfix-${name}" text;
 
+  generatedFiles = "/var/postfix/generated-files";
+
   # run postmap or postalias
-  aliasOrMapDB = inputFile: name: command: commandArgs: type:
-    let s = pkgs.runCommand "${name}-${command}" {} ''
-              mkdir -p $out; cd $out
-              n="${name}"
-              # fake a config. No idea why postfix want's to read it when creating .db files
-              # $USER is empty here ..
-              # setting mail_owner prevents postfix commands from failing because the postfix user does not exist yet
-              cat > ./main.cf << EOF
-              mail_owner = $(id | sed 's/[^(]*(\([^)]*\).*/\1/')
-              EOF
-              ${
-              if type == "regexp" then ''
-                cp ${inputFile} ./$n
-                # sanity check
-                ${postfix}/sbin/${command} ${commandArgs} -q 'dummy' regexp:./$n |& grep ', line' && { echo "$n bad format!"; exit 1; } || true
-              '' else ''
-                cp ${inputFile} "$n"
-                ${postfix}/sbin/${command} ${commandArgs} "${type}:$n"
-                rm $n
-                # sanity check
-                ${postfix}/sbin/${command} ${commandArgs} -s ${type}:./$n > /dev/null || { echo "$n bad format!"; exit 1; }
-              [ -f "''${n}.db" ]
-              ''
-              }
-            '';
-    in "${s}/${name}";
+  aliasOrMapDB = inputFile: name: command: commandArgs: type: rec {
+    fname = "${generatedFiles}/${name}";
+    cmd = 
+      if type == "regexp" then ''
+        cp ${inputFile} ${fname}
+        # sanity check
+        ${postfix}/sbin/${command} ${commandArgs} -q 'dummy' regexp:${fname} |& grep ', line' && { echo "${fname} bad format!"; exit 1; } || true
+      '' else ''
+        cp ${inputFile} "${fname}"
+        ${postfix}/sbin/${command} ${commandArgs} "${type}:${fname}"
+        rm $n
+        # sanity check
+        ${postfix}/sbin/${command} ${commandArgs} -s "${type}:${fname}" > /dev/null || { echo "${fname} bad format!"; exit 1; }
+        [ -f "${fname}.db" ]
+      '';
+  };
 
   tableToAttrs = x:
         if x ? static then {
@@ -61,15 +53,17 @@ let
         }
         else if x ? map then
 	let type = maybeAttr "type" "hash" x;
+            d = aliasOrMapDB (mapFile x.name x.map) x.name "postmap" "-c /etc/postfix" type;
 	in {
-          cmd =  "";
-          cfg = "${x.name} = ${type}:${aliasOrMapDB (mapFile x.name x.map) x.name "postmap" "-c ./" type}\n";
+          inherit (d) cmd;
+          cfg = "${x.name} = ${type}:${d.fname}\n";
         }
         else if x ? aliases then
 	let type = maybeAttr "type" "hash" x;
+            d = aliasOrMapDB (aliasFile x.name x.aliases) x.name "postalias" "-c /etc/postfix" type;
 	in {
-          cmd =  "";
-          cfg = "${x.name} = ${type}:${aliasOrMapDB (aliasFile x.name x.aliases) x.name "postalias" "-c ./" type}\n";
+          inherit (d) cmd;
+          cfg = "${x.name} = ${type}:${d.fname}\n";
         }
         else throw "bad";
   configForTables = map tableToAttrs cfg.tables;
@@ -484,6 +478,9 @@ in
         ${pkgs.coreutils}/bin/chmod a+rwxt /var/spool/mail
 
         ${cfg.preStartCommands}
+
+        rm -fr ${generatedFiles}
+        mkdir -p ${generatedFiles}
         ${concatStrings (catAttrs "cmd" configForTables)}
         '';
       in ''
