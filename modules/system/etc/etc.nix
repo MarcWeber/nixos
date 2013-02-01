@@ -66,8 +66,9 @@ let
 
     /* !!! Use toXML. */
     sources = map (x: x.source) cfg.etc;
-    targets = map (x: if (elem x cfg.etcFilesProvidedByAdmin)
-                      then "${x.target}.sample" else x.target)
+    targets = map (x: x.target
+                      # if admin wants to maintain file suffix by .sample:
+                      + (if elem x.target cfg.etcFilesProvidedByAdmin then ".sample" else ""))
                   cfg.etc;
     modes = map (x: x.mode) cfg.etc;
   };
