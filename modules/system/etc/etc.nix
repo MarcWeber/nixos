@@ -6,7 +6,10 @@ with pkgs.lib;
 ###### interface
 let
 
+  cfg = config.environment;
+
   option = {
+
     environment.etc = mkOption {
       default = [];
       example = [
@@ -37,6 +40,17 @@ let
         };
       };
     };
+
+    environment.etcFilesProvidedByAdmin = mkOption {
+      exmaple = ["nix.machines"];
+      default = [];
+      description = ''
+        While being pure is nice sometimes its more convenient to provide /etc files yourself.
+        Nice use cases could be /etc/hosts and /etc/nix.machines for instance.
+        A quick alternative is mv /etc/hosts{,.backup} get your job done and move it back.
+      '';
+    };
+
   };
 in
 
@@ -51,9 +65,12 @@ let
     preferLocalBuild = true;
 
     /* !!! Use toXML. */
-    sources = map (x: x.source) config.environment.etc;
-    targets = map (x: x.target) config.environment.etc;
-    modes = map (x: x.mode) config.environment.etc;
+    sources = map (x: x.source) cfg.etc;
+    targets = map (x: x.target
+                      # if admin wants to maintain file suffix by .sample:
+                      + (if elem x.target cfg.etcFilesProvidedByAdmin then ".sample" else ""))
+                  cfg.etc;
+    modes = map (x: x.mode) cfg.etc;
   };
 
 in
