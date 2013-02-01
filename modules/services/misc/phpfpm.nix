@@ -24,13 +24,20 @@ let
         then
           let remote_host = pool.xdebug.remote_host or "127.0.0.1";
               remote_port = builtins.toString pool.xdebug.remote_port or 9000;
-          in {
-            idAppend = "-xdebug";
-            phpIniLines = ''
-              remote_host = "${remote_host}";
-              remote_port = ${remote_port};
-            '';
-          }
+           in {
+             idAppend = "-xdebug";
+             phpIniLines = ''
+              zend_extension="${pool.php.xdebug}/lib/xdebug.so"
+              zend_extension_ts="${pool.php.xdebug}/lib/xdebug.so"
+              zend_extension_debug="${pool.php.xdebug}/lib/xdebug.so"
+              xdebug.remote_enable=true
+              xdebug.remote_host=${remote_host}
+              xdebug.remote_port=${remote_port}
+              xdebug.remote_handler=dbgp
+              xdebug.profiler_enable=0
+              xdebug.remote_mode=req
+             '';
+           }
         else {
           idAppend = "";
           phpIniLines = "";
@@ -41,14 +48,14 @@ let
 
 
       # using phpIniLines create a cfg-id
-      iniId = builtins.substring 0 5 (builtins.hash "sha256" phpIniLines)
+      iniId = builtins.substring 0 5 (builtins.hash "sha256" (unsafeDiscardStringContext phpIniLines))
               +xd.idAppend;
 
       phpIni = (pool.phpIniFile or phpIniFile) {
         inherit (pool) php;
         name = "php-${iniId}.ini";
         phpIniLines =
-          (pool.phpIniLines or "")
+          phpIniLines
           + optionalString enableXdebug "\nprofiler_output_dir = \"${profileDir iniId}\;";
       };
 
