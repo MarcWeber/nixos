@@ -12,7 +12,7 @@ let
     {php, phpIniLines, name}:
       if phpIniLines == null
       then null # use whatever is default
-      else (pkgs.runCommand name { }
+      else (pkgs.runCommand name { inherit phpIniLines; }
         "cat ${php}/etc/php-recommended.ini > $out; echo \"$phpIniLines\" >> $out"
       );
 
@@ -92,6 +92,7 @@ in {
 
   options = {
     services.phpfpm = {
+
       enable = mkOption {
         default = true;
         description = "Whether to enable the PHP FastCGI Process Manager.";
@@ -185,6 +186,7 @@ in {
           worker threads ..
         '';
       };
+
     };
   };
 
