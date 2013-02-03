@@ -9,11 +9,7 @@ let
 
   script = pkgs.writeScript "virtualbox-server" ''
   #!/bin/sh
-  if [ "$1" == start ]; then
-    for m in ${modules}; do ${modprobe}/sbin/modprobe $m; done;
-  else
-    for m in ${modules}; do ${modprobe}/sbin/modprobe $m; done;
-  fi
+  for m in ${modules}; do ${modprobe}/sbin/modprobe $1 $m; done;
   '';
 in
 {
@@ -31,8 +27,8 @@ in
           Description=load virtual box kernel modules
 
           [Service]
-          ExecStart=${script} start
-          ExecStop=${script} stop
+          ExecStart=${script}
+          ExecStop=${script} -r
           Type=oneshot
         '';
 
