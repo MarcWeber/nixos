@@ -201,7 +201,6 @@ in {
   # is too strict, need to evaluate "config", so pick attrs which are used only
   config = {
     environment = mkMerge (catAttrs "environment" phpFpmDaemons);
-    systemd.units = fold mergeAttrs {} (catAttrs "units" phpFpmDaemons);
-    systemd.services = fold mergeAttrs {} (catAttrs "services" phpFpmDaemons);
+    systemd = mkMerge (catAttrs "systemd" phpFpmDaemons);
   };
 }
