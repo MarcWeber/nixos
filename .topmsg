@@ -26,9 +26,9 @@ lazy usage examlpe:
         };
         in {
             "php54" = {
-              php = pkgs.php5_4fpm;
-              id = "5.4";
-              pool = {
+              daemonCfg.php = pkgs.php5_4fpm;
+              # daemonCfg.id = "5.4"; # optional
+              poolItemCfg = {
                inherit environment;
                user  = "user";
                group  = "users"; 
@@ -37,9 +37,9 @@ lazy usage examlpe:
               };
             };
             "php53" = rec {
-              php = pkgs.php5_3fpm;
-              id = "php-fpm-5.3";
-              pool = {
+              daemonCfg.php = pkgs.php5_3fpm;
+              # daemonCfg.id = "5.3"; # optional
+              poolItemCfg = {
                # inherit environment;
                user  = "user";
                group  = "users"; 
