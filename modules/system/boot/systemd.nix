@@ -226,7 +226,7 @@ let
           Environment=PATH=${def.path}
           Environment=LD_LIBRARY_PATH=
           ${let env = cfg.globalEnvironment // def.environment;
-            in concatMapStrings (n: "Environment=${n}=${getAttr n env}\n") (attrNames env)}
+            in concatMapStrings (n: "Environment=\"${n}=${getAttr n env}\"\n") (attrNames env)}
           ${optionalString (!def.restartIfChanged) "X-RestartIfChanged=false"}
           ${optionalString (!def.stopIfChanged) "X-StopIfChanged=false"}
 
@@ -241,7 +241,7 @@ let
             ExecStart=${makeJobScript "${name}-start" ''
               #! ${pkgs.stdenv.shell} -e
               ${def.script}
-            ''}
+            ''} ${def.scriptArgs}
           ''}
 
           ${optionalString (def.postStart != "") ''
