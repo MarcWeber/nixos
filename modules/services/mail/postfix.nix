@@ -13,6 +13,12 @@ let
 
   inherit (pkgs) postfix;
 
+  postfixEtcDir = pkgs.runCommand "postfix-etc-dir" {} ''
+    ensureDir $out
+    ln -s ${postfix}/share/postfix/conf/master.cf $out/master.cf
+    ln -s ${postfix}/share/postfix/conf/bounce.cf.default $out/bounce.cf
+    ln -s ${mainCfFile} $out/main.cf
+  '';
   # helper functions
 
   nullOrValue = x: x == null || (x != "" && builtins.isString x);
@@ -53,14 +59,14 @@ let
         }
         else if x ? map then
 	let type = maybeAttr "type" "hash" x;
-            d = aliasOrMapDB (mapFile x.name x.map) x.name "postmap" "-c /etc/postfix" type;
+            d = aliasOrMapDB (mapFile x.name x.map) x.name "postmap" "-c ${postfixEtcDir}" type;
 	in {
           inherit (d) cmd;
           cfg = "${x.name} = ${type}:${d.fname}\n";
         }
         else if x ? aliases then
 	let type = maybeAttr "type" "hash" x;
-            d = aliasOrMapDB (aliasFile x.name x.aliases) x.name "postalias" "-c /etc/postfix" type;
+            d = aliasOrMapDB (aliasFile x.name x.aliases) x.name "postalias" "-c ${postfixEtcDir}" type;
 	in {
           inherit (d) cmd;
           cfg = "${x.name} = ${type}:${d.fname}\n";
@@ -397,24 +403,9 @@ in
                 + "See services.postfix.tables options. Ignore this by defining an empty map";
       };
 
-    environment = {
-
-      etc =
-	let cp = source: name:
-	  { source = "${postfix}/share/postfix/conf/${source}";
-	    target = "postfix/${name}";
-	  };
-	in [
-        { source = mainCfFile;
-          target = "postfix/main.cf";
-        }
-	( cp "master.cf" "master.cf" )
-        ( cp "bounce.cf.default" "bounce.cf" )
-     ];
-
-      # This makes comfortable for root to run 'postqueue' for example.
-      systemPackages = [ postfix ];
-    };
+    environment.etc.postfix.source = postfixEtcDir;
+    # This makes comfortable for root to run 'postqueue' for example.
+    environment.systemPackages = [ postfix ];
 
     services.mail.sendmailSetuidWrapper = mkIf config.services.postfix.setSendmail {
       program = "sendmail";
