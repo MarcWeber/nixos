@@ -88,8 +88,16 @@ in
           always available either use nixos
           <command>nixos-rebuild --no-build-hook</command>
           or consider managing <filename>/etc/nix.machines</filename> manually
-          by setting <option>environment.etcFilesProvidedByAdmin</option>. Then you can comment
+          by setting <option>manualNixMachines</option>. Then you can comment
           unavailable buildmachines.
+        ";
+      };
+
+      manualNixMachines = mkOption {
+        default = false;
+        description = "
+          Whether to manually manage the list of buildmachines used in distributed
+          builds in /etc/nix.machines.
         ";
       };
 
@@ -248,7 +256,7 @@ in
         }
       ]
 
-      ++ optional (cfg.distributedBuilds)
+      ++ optional (cfg.distributedBuilds && !cfg.manualNixMachines)
         { # List of machines for distributed Nix builds in the format expected
           # by build-remote.pl.
           source = pkgs.writeText "nix.machines"
