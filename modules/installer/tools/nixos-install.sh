@@ -85,7 +85,12 @@ mkdir -m 0755 -p \
     $mountPoint/nix/var/log/nix/drvs
 
 mkdir -m 1775 -p $mountPoint/nix/store
-chown root:nixbld $mountPoint/nix/store
+build_users_group=$(@perl@/bin/perl -e 'use Nix::Config; Nix::Config::readConfig; print $Nix::Config::config{"build-users-group"};')
+if test -n "$build_users_group"; then
+    chown root:"$build_users_group" $mountPoint/nix/store
+else
+    chown root $mountPoint/nix/store
+fi
 
 
 # Get the store paths to copy from the references graph.
@@ -107,10 +112,19 @@ export LC_ALL=
 export LC_TIME=
 
 
+# There is no daemon in the chroot
+unset NIX_REMOTE
+
+
 # Create a temporary Nix config file that causes the nixbld users to
 # be used.
-echo "build-users-group = nixbld" > $mountPoint/tmp/nix.conf
-grep binary-caches /etc/nix/nix.conf >> $mountPoint/tmp/nix.conf
+if test -n "$build_users_group"; then
+    echo "build-users-group = $build_users_group" > $mountPoint/tmp/nix.conf
+fi
+binary_caches=$(@perl@/bin/perl -e 'use Nix::Config; Nix::Config::readConfig; print $Nix::Config::config{"binary-caches"};')
+if test -n "$binary_caches"; then
+    echo "binary-caches = $binary_caches" >> $mountPoint/tmp/nix.conf
+fi
 export NIX_CONF_DIR=/tmp
 
 
@@ -149,25 +163,29 @@ done
 
 
 # Get the absolute path to the NixOS/Nixpkgs sources.
-srcs=$(nix-env -p /nix/var/nix/profiles/per-user/root/channels -q nixos --no-name --out-path)
+nixpkgs_src=$(readlink -f $(nix-instantiate --find-file nixpkgs))
+nixos_src=$(readlink -f $(nix-instantiate --find-file nixos))
 
 
 # Build the specified Nix expression in the target store and install
 # it into the system configuration profile.
 echo "building the system configuration..."
-NIX_PATH="/mnt$srcs/nixos:nixos-config=$NIXOS_CONFIG" NIXOS_CONFIG= \
+NIX_PATH="nixpkgs=/mnt$nixpkgs_src:nixos=/mnt$nixos_src:nixos-config=$NIXOS_CONFIG" NIXOS_CONFIG= \
     chroot $mountPoint @nix@/bin/nix-env \
     -p /nix/var/nix/profiles/system -f '<nixos>' --set -A system --show-trace
 
 
 # Copy the NixOS/Nixpkgs sources to the target as the initial contents
 # of the NixOS channel.
-echo "copying NixOS/Nixpkgs sources..."
 mkdir -m 0755 -p $mountPoint/nix/var/nix/profiles
 mkdir -m 1777 -p $mountPoint/nix/var/nix/profiles/per-user
 mkdir -m 0755 -p $mountPoint/nix/var/nix/profiles/per-user/root
-chroot $mountPoint @nix@/bin/nix-env \
-    -p /nix/var/nix/profiles/per-user/root/channels -i "$srcs" --quiet
+srcs=$(nix-env -p /nix/var/nix/profiles/per-user/root/channels -q nixos --no-name --out-path 2>/dev/null || echo -n "")
+if test -n "$srcs"; then
+    echo "copying NixOS/Nixpkgs sources..."
+    chroot $mountPoint @nix@/bin/nix-env \
+        -p /nix/var/nix/profiles/per-user/root/channels -i "$srcs" --quiet
+fi
 mkdir -m 0700 -p $mountPoint/root/.nix-defexpr
 ln -sfn /nix/var/nix/profiles/per-user/root/channels $mountPoint/root/.nix-defexpr/channels
 

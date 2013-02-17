@@ -130,7 +130,7 @@ let
           NIX_STATE_DIR=$TMPDIR nix-env -f ../$releaseName/default.nix -qaP --meta --xml \* > /dev/null
           cd ..
           chmod -R u+w $releaseName
-          tar cfj $out/tarballs/$releaseName.tar.bz2 $releaseName
+          tar cfJ $out/tarballs/$releaseName.tar.xz $releaseName
         ''; # */
       };
 
@@ -168,11 +168,12 @@ let
       type = "new-kernel";
     };
 
-    # A variant with experimental efi booting support. Currently requires
-    # an RC kernel. Eventually this should probably be merged into cd-minimal
+    # A variant with efi booting support. Once cd-minimal has a newer kernel,
+    # this should be enabled by default.
     iso_efi = makeIso {
       module = ./modules/installer/cd-dvd/installation-cd-efi.nix;
       type = "efi";
+      maintainers = [ "shlevy" ];
     };
 
     # Provide a tarball that can be unpacked into an SD card, and easily
