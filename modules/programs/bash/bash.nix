@@ -86,7 +86,10 @@ let
 
   options = {
 
+<<<<<<< HEAD
     # TODO: move into bash namespace?
+=======
+>>>>>>> refs/top-bases/systemd/multi-shell-support
     environment.promptInit = mkOption {
       default = ''
         # Provide a nice prompt.
@@ -97,25 +100,40 @@ let
           PS1="\[\033]2;\h:\u:\w\007\]$PS1"
         fi
       '';
+<<<<<<< HEAD
       description = "
         Script used to initialized sh/bash shell prompt.
       ";
+=======
+      description = ''
+        Shell script code used to initialise the shell prompt.
+      '';
+>>>>>>> refs/top-bases/systemd/multi-shell-support
       type = with pkgs.lib.types; string;
     };
 
     environment.shellInit = mkOption {
       default = "";
       example = ''export PATH=/godi/bin/:$PATH'';
-      description = "
-        Script used to initialized user shell environments.
-      ";
+      description = ''
+        Shell script code called during login shell initialisation.
+      '';
+      type = with pkgs.lib.types; string;
+    };
+
+    environment.interactiveShellInit = mkOption {
+      default = "";
+      example = ''export PATH=/godi/bin/:$PATH'';
+      description = ''
+        Shell script code called during interactive shell initialisation.
+      '';
       type = with pkgs.lib.types; string;
     };
 
     # TODO: rename to environment.bash.enableCompletion ?
     environment.enableBashCompletion = mkOption {
       default = false;
-      description = "Enable bash-completion for all interactive shells.";
+      description = "Enable Bash completion for all interactive shells.";
       type = with pkgs.lib.types; bool;
     };
 
@@ -170,8 +188,12 @@ in
         source = pkgs.substituteAll {
           src = ./profile.sh;
           wrapperDir = config.security.wrapperDir;
+<<<<<<< HEAD
           shellInit = config.environment.shellInit;
           nixBashLib = nixBashLibPath;
+=======
+          inherit (cfg) shellInit;
+>>>>>>> refs/top-bases/systemd/multi-shell-support
         };
         target = "profile";
       }
@@ -179,7 +201,14 @@ in
       { # /etc/bashrc: executed every time a bash starts. Sources
         # /etc/profile to ensure that the system environment is
         # configured properly.
+<<<<<<< HEAD
         source = ./bashrc.sh;
+=======
+        source = pkgs.substituteAll {
+          src = ./bashrc.sh;
+          inherit (cfg) interactiveShellInit;
+        };
+>>>>>>> refs/top-bases/systemd/multi-shell-support
         target = "bashrc";
       }
 
@@ -305,6 +334,16 @@ in
     };
   };
 
+  environment.interactiveShellInit =
+    ''
+      # Check the window size after every command.
+      shopt -s checkwinsize
+
+      ${cfg.promptInit}
+      ${initBashCompletion}
+      ${shellAliases}
+    '';
+
   system.build.binsh = pkgs.bashInteractive;
 
   system.activationScripts.binsh = stringAfter [ "stdio" ]
@@ -312,10 +351,10 @@ in
       # Create the required /bin/sh symlink; otherwise lots of things
       # (notably the system() function) won't work.
       mkdir -m 0755 -p /bin
-      ln -sfn "${config.environment.binsh}" /bin/.sh.tmp
+      ln -sfn "${cfg.binsh}" /bin/.sh.tmp
       mv /bin/.sh.tmp /bin/sh # atomically replace /bin/sh
     '';
 
-  # always link bash_completion.d, user's may wan to opt-in.
+  # always link bash_completion.d, user's may want to opt-in.
   environment.pathsToLink = ["/etc/bash_completion.d"];
 }
