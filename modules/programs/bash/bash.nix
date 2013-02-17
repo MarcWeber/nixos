@@ -106,16 +106,16 @@ let
     environment.shellInit = mkOption {
       default = "";
       example = ''export PATH=/godi/bin/:$PATH'';
-      description = "
-        Script used to initialized user shell environments.
-      ";
+      description = ''
+        Shell script code called during login shell initialisation.
+      '';
       type = with pkgs.lib.types; string;
     };
 
     # TODO: rename to environment.bash.enableCompletion ?
     environment.enableBashCompletion = mkOption {
       default = false;
-      description = "Enable bash-completion for all interactive shells.";
+      description = "Enable Bash completion for all interactive shells.";
       type = with pkgs.lib.types; bool;
     };
 
@@ -316,6 +316,6 @@ in
       mv /bin/.sh.tmp /bin/sh # atomically replace /bin/sh
     '';
 
-  # always link bash_completion.d, user's may wan to opt-in.
+  # always link bash_completion.d, user's may want to opt-in.
   environment.pathsToLink = ["/etc/bash_completion.d"];
 }
