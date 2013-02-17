@@ -36,6 +36,7 @@
   ./misc/passthru.nix
   ./misc/version.nix
   ./programs/bash/bash.nix
+  ./programs/bash/command-not-found.nix
   ./programs/blcr.nix
   ./programs/info.nix
   ./programs/shadow.nix
@@ -132,6 +133,7 @@
   ./services/networking/hostapd.nix
   ./services/networking/ifplugd.nix
   ./services/networking/ircd-hybrid/default.nix
+  ./services/networking/minidlna.nix
   ./services/networking/nat.nix
   ./services/networking/networkmanager.nix
   ./services/networking/ntpd.nix
@@ -152,6 +154,7 @@
   ./services/networking/unbound.nix
   ./services/networking/vsftpd.nix
   ./services/networking/wakeonlan.nix
+  ./services/networking/websockify.nix
   ./services/networking/wicd.nix
   ./services/networking/wpa_supplicant.nix
   ./services/networking/xinetd.nix
@@ -198,7 +201,10 @@
   ./system/activation/top-level.nix
   ./system/boot/kernel.nix
   ./system/boot/loader/efi-boot-stub/efi-boot-stub.nix
+  ./system/boot/loader/efi.nix
   ./system/boot/loader/generations-dir/generations-dir.nix
+  ./system/boot/loader/gummiboot/gummiboot.nix
+  ./system/boot/loader/raspberrypi/raspberrypi.nix
   ./system/boot/loader/grub/grub.nix
   ./system/boot/loader/grub/memtest.nix
   ./system/boot/loader/init-script/init-script.nix
