@@ -5,6 +5,7 @@ with pkgs.lib;
 
 let
   modprobe = config.system.sbin.modprobe; 
+  # order doesn't matter when loading, thus use order which works for unloading
   modules = "vboxnetflt vboxnetadp vboxdrv";
 
   script = pkgs.writeScript "virtualbox-server" ''
@@ -22,15 +23,14 @@ in
       environment.systemPackages = [ config.boot.kernelPackages.virtualbox ];
       boot.extraModulePackages = [ config.boot.kernelPackages.virtualbox ];
 
-      systemd.units."virtualbox-server.service".text = ''
-          [Unit]
-          Description=load virtual box kernel modules
-
-          [Service]
-          ExecStart=${script}
-          ExecStop=${script} -r
-          Type=oneshot
-        '';
-
+      systemd.services."virtualbox-server" = {
+        description = "load virtual box kernel modules";
+        serviceConfig = {
+          ExecStart=script;
+          ExecStop="${script} -r";
+          RemainAfterExit="yes";
+          Type="oneshot";
+        };
+      };
   };
 }
