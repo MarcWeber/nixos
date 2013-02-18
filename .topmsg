@@ -4,17 +4,12 @@ Subject: [PATCH] systemd/php-fpm
 php-fpm support, 
 
 requires:
-  - requires hash patch (nix)
-    github.com/MarcWeber/nix/tree/experimental/hash
-    (also found in github.com/MarcWeber/nixpkgs branch experimental/nix)
+  - requires recent nix hashString implementation
 
   - requires patches to PHP
     github.com/MarcWeber/nix/tree/experimental/php
     can't feed upstream because it depends on
     branch experimental/multiple-versions-in-one-file
-
-  - maybe a security review should be done.
-    Works for me.
 
 lazy usage examlpe:
 
