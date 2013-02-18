@@ -46,7 +46,7 @@ let
 
 
       # using phpIniLines create a cfg-id
-      iniId = builtins.substring 0 5 (builtins.hash "sha256" (unsafeDiscardStringContext phpIniLines))
+      iniId = builtins.substring 0 5 (builtins.hashString "sha256" (unsafeDiscardStringContext phpIniLines))
               +xd.idAppend;
 
       phpIni = (item.daemonCfg.phpIniFile or phpIniFile) {
@@ -125,7 +125,7 @@ in {
       socketPathFun = mkOption {
         description = "Function returning socket path by pool to which web servers connect to.";
         default = pool:
-          let pool_h = builtins.substring 0 8 (builtins.hash "sha256" (builtins.toXML pool.poolItemCfg));
+          let pool_h = builtins.substring 0 8 (builtins.hashString "sha256" (builtins.toXML pool.poolItemCfg));
           in "/dev/shm/php-fpm-${cfg.daemonIdFun pool}-${pool_h}";
       };
 
