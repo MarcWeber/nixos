@@ -218,9 +218,9 @@ in
 
     nix.chrootDirs = [ "/dev" "/dev/pts" "/proc" "/bin" ];
 
-    environment.etc =
-      [ { # Nix configuration.
-          source =
+    environment.etc = {
+      "nix/nix.conf".source =
+        # Nix configuration.
             let
               # Tricky: if we're using a chroot for builds, then we need
               # /bin/sh in the chroot (our own compromise to purity).
@@ -244,23 +244,18 @@ in
                 $extraOptions
                 END
               '';
-          target = "nix/nix.conf";
-        }
-      ]
 
-      ++ optional cfg.distributedBuilds
-        { # List of machines for distributed Nix builds in the format expected
-          # by build-remote.pl.
-          source = pkgs.writeText "nix.machines"
+     "nix.machines".text =
+      if cfg.distributedBuilds then
             (concatStrings (map (machine:
               "${machine.sshUser}@${machine.hostName} "
               + (if machine ? system then machine.system else concatStringsSep "," machine.systems)
               + " ${machine.sshKey} ${toString machine.maxJobs} "
               + (if machine ? speedFactor then toString machine.speedFactor else "1" )
               + "\n"
-            ) cfg.buildMachines));
-          target = "nix.machines";
-        };
+            ) cfg.buildMachines))
+      else mkNotdef;
+    };
 
     systemd.sockets."nix-daemon" =
       { description = "Nix Daemon Socket";
