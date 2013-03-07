@@ -451,7 +451,7 @@ in
         }
       ];
 
-    systemd.units."postfix.service".text =
+    systemd.services.postfix =
       let
         pidFile = "/var/postfix/queue/pid/master.pid";
 
@@ -474,24 +474,23 @@ in
         mkdir -p ${generatedFiles}
         ${concatStrings (catAttrs "cmd" configForTables)}
         '';
-      in ''
-        [Unit]
-        Description=Mail Daemon
-        After=network.target
+      in {
+        description = "Postfix mail server";
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "fork";
 
-        [Service]
-        Environment=PATH=${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.gnugrep}/bin:${pkgs.gnused}/bin:${pkgs.gawk}/bin
-        Environment=TZ=${config.time.timeZone}
-        Type=forking
-        ExecStartPre=${preStartScript}
-        ExecStart=${postfix}/sbin/postfix -c /etc/postfix start
-        ExecStop=${postfix}/sbin/postfix -c /etc/postfix stop
-        ExecReload=${postfix}/sbin/postfix -c /etc/postfix reload
+          ExecStartPre=preStartScript;
+          ExecStart="${postfix}/sbin/postfix -c /etc/postfix start";
+          ExecStop="${postfix}/sbin/postfix -c /etc/postfix stop";
+          ExecReload="${postfix}/sbin/postfix -c /etc/postfix reload";
+        };
 
-        [Install]
-        WantedBy=multi-user.target
-      '';
-
+        environment = {
+          TZ = config.time.timeZone;
+          PATH="${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.gnugrep}/bin:${pkgs.gnused}/bin:${pkgs.gawk}/bin";
+        };
+      };
   };
 
 }
