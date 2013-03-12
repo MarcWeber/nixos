@@ -478,7 +478,7 @@ in
         description = "Postfix mail server";
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
-          Type = "fork";
+          Type = "forking";
 
           ExecStartPre=preStartScript;
           ExecStart="${postfix}/sbin/postfix -c /etc/postfix start";
