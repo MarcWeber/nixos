@@ -12,17 +12,13 @@ let
 
     isExecutable = true;
 
-    inherit (pkgs) python gummiboot kmod efibootmgr;
+    inherit (pkgs) python gummiboot;
 
     inherit (config.environment) nix;
 
     inherit (cfg) timeout;
 
-    inherit (efi) efiSysMountPoint;
-
-    inherit (efi.efibootmgr) postEfiBootMgrCommands efiDisk efiPartition;
-
-    runEfibootmgr = efi.efibootmgr.enable;
+    inherit (efi) efiSysMountPoint canTouchEfiVariables;
   };
 in {
   options.boot.loader.gummiboot = {
@@ -52,7 +48,7 @@ in {
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = (config.boot.kernelPacakges.kernel.features or { efiBootStub = true; }) ? efiBootStub;
+        assertion = (config.boot.kernelPackages.kernel.features or { efiBootStub = true; }) ? efiBootStub;
 
         message = "This kernel does not support the EFI boot stub";
       }
