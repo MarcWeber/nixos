@@ -99,7 +99,7 @@ let
 
     environment.zsh.usedFeatures = mkOption {
       default = attrNames cfg.availableFeatures;
-      type = types.list types.string;
+      type = types.listOf types.string;
       description = ''
         list bash which should be activated by default. Allow system administrators to provide a white list
       '';

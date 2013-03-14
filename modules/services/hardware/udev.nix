@@ -86,6 +86,13 @@ let
       ${optionalString (!config.networking.usePredictableInterfaceNames) ''
         ln -s /dev/null $out/80-net-name-slot.rules
       ''}
+
+      # If auto-configuration is disabled, then remove
+      # udev's 80-drivers.rules file, which contains rules for
+      # automatically calling modprobe.
+      ${optionalString (!config.boot.hardwareScan) ''
+        ln -s /dev/null $out/80-drivers.rules
+      ''}
     ''; # */
   };
 
@@ -220,6 +227,12 @@ in
       (isYes "INOTIFY_USER")
       (isYes "NET")
     ];
-  };
 
+    boot.extraKernelParams = [ "firmware_class.path=${config.hardware.firmware}" ];
+
+    boot.extraModprobeConfig = "options firmware_class path=${config.hardware.firmware}";
+
+    system.activationScripts."set-firmware-path" =
+      "echo -n ${config.hardware.firmware} 2>/dev/null > /sys/module/firmware_class/parameters/path";
+  };
 }

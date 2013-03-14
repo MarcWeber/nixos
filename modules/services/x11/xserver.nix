@@ -225,7 +225,8 @@ in
         description = ''
           On 64-bit systems, whether to support Direct Rendering for
           32-bit applications (such as Wine).  This is currently only
-          supported for the <literal>nvidia</literal> driver.
+          supported for the <literal>nvidia</literal> driver and for
+          <literal>mesa</literal>.
         '';
       };
 
@@ -494,12 +495,19 @@ in
               else if elem "nvidiaLegacy173" driverNames then
                 "ln -sf ${kernelPackages.nvidia_x11_legacy173} /run/opengl-driver"
               else if elem "nvidiaLegacy304" driverNames then
-                "ln -sf ${kernelPackages.nvidia_x11_legacy304} /run/opengl-driver"
+                ''
+                  ln -sf ${kernelPackages.nvidia_x11_legacy304} /run/opengl-driver
+                  ${optionalString (pkgs.stdenv.system == "x86_64-linux" && cfg.driSupport32Bit)
+                    "ln -sf ${pkgs_i686.linuxPackages.nvidia_x11_legacy304.override { libsOnly = true; kernel = null; } } /run/opengl-driver-32"}
+                ''
               else if elem "ati_unfree" driverNames then
                 "ln -sf ${kernelPackages.ati_drivers_x11} /run/opengl-driver"
-              else if cfg.driSupport then
-                "ln -sf ${pkgs.mesa} /run/opengl-driver"
-              else ""
+              else
+                ''
+                  ${optionalString cfg.driSupport "ln -sf ${pkgs.mesa} /run/opengl-driver"}
+                  ${optionalString (pkgs.stdenv.system == "x86_64-linux" && cfg.driSupport32Bit)
+                    "ln -sf ${pkgs_i686.mesa} /run/opengl-driver-32"}
+                ''
             }
 
             ${cfg.displayManager.job.preStart}
