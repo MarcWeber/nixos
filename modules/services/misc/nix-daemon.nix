@@ -20,6 +20,31 @@ let
       extraGroups = [ "nixbld" ];
     };
 
+  nixConf =
+    let
+      # Tricky: if we're using a chroot for builds, then we need
+      # /bin/sh in the chroot (our own compromise to purity).
+      # However, since /bin/sh is a symlink to some path in the
+      # Nix store, which furthermore has runtime dependencies on
+      # other paths in the store, we need the closure of /bin/sh
+      # in `build-chroot-dirs' - otherwise any builder that uses
+      # /bin/sh won't work.
+      binshDeps = pkgs.writeReferencesToFile config.system.build.binsh;
+    in
+      pkgs.runCommand "nix.conf" {extraOptions = cfg.extraOptions; } ''
+        extraPaths=$(for i in $(cat ${binshDeps}); do if test -d $i; then echo $i; fi; done)
+        cat > $out <<END
+        # WARNING: this file is generated.
+        build-users-group = nixbld
+        build-max-jobs = ${toString (cfg.maxJobs)}
+        build-use-chroot = ${if cfg.useChroot then "true" else "false"}
+        build-chroot-dirs = ${toString cfg.chrootDirs} $(echo $extraPaths)
+        binary-caches = ${toString cfg.binaryCaches}
+        trusted-binary-caches = ${toString cfg.trustedBinaryCaches}
+        $extraOptions
+        END
+      '';
+
 in
 
 {
@@ -218,44 +243,20 @@ in
 
     nix.chrootDirs = [ "/dev" "/dev/pts" "/proc" "/bin" ];
 
-    environment.etc = {
-      "nix/nix.conf".source =
-        # Nix configuration.
-            let
-              # Tricky: if we're using a chroot for builds, then we need
-              # /bin/sh in the chroot (our own compromise to purity).
-              # However, since /bin/sh is a symlink to some path in the
-              # Nix store, which furthermore has runtime dependencies on
-              # other paths in the store, we need the closure of /bin/sh
-              # in `build-chroot-dirs' - otherwise any builder that uses
-              # /bin/sh won't work.
-              binshDeps = pkgs.writeReferencesToFile config.system.build.binsh;
-            in
-              pkgs.runCommand "nix.conf" {extraOptions = cfg.extraOptions; } ''
-                extraPaths=$(for i in $(cat ${binshDeps}); do if test -d $i; then echo $i; fi; done)
-                cat > $out <<END
-                # WARNING: this file is generated.
-                build-users-group = nixbld
-                build-max-jobs = ${toString (cfg.maxJobs)}
-                build-use-chroot = ${if cfg.useChroot then "true" else "false"}
-                build-chroot-dirs = ${toString cfg.chrootDirs} $(echo $extraPaths)
-                binary-caches = ${toString cfg.binaryCaches}
-                trusted-binary-caches = ${toString cfg.trustedBinaryCaches}
-                $extraOptions
-                END
-              '';
+    environment.etc."nix/nix.conf".source = nixConf;
 
-     "nix.machines".text =
-      if cfg.distributedBuilds then
-            (concatStrings (map (machine:
-              "${machine.sshUser}@${machine.hostName} "
-              + (if machine ? system then machine.system else concatStringsSep "," machine.systems)
-              + " ${machine.sshKey} ${toString machine.maxJobs} "
-              + (if machine ? speedFactor then toString machine.speedFactor else "1" )
-              + "\n"
-            ) cfg.buildMachines))
-      else mkNotdef;
-    };
+    # List of machines for distributed Nix builds in the format
+    # expected by build-remote.pl.
+    environment.etc."nix.machines" =
+      { enable = cfg.distributedBuilds && !cfg.manualNixMachines;
+        text =
+          concatMapStrings (machine:
+            "${machine.sshUser}@${machine.hostName} "
+            + (if machine ? system then machine.system else concatStringsSep "," machine.systems)
+            + " ${machine.sshKey} ${toString machine.maxJobs} "
+            + (if machine ? speedFactor then toString machine.speedFactor else "1" )
+            + "\n"
+          ) cfg.buildMachines;
 
     systemd.sockets."nix-daemon" =
       { description = "Nix Daemon Socket";
@@ -279,6 +280,8 @@ in
             IOSchedulingPriority = cfg.daemonIONiceLevel;
             LimitNOFILE = 4096;
           };
+
+        restartTriggers = [ nixConf ];
       };
 
     nix.envVars =

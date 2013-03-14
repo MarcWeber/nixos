@@ -10,6 +10,7 @@
   ./config/pulseaudio.nix
   ./config/shells.nix
   ./config/swap.nix
+  ./config/sysctl.nix
   ./config/system-path.nix
   ./config/timezone.nix
   ./config/unix-odbc-drivers.nix
@@ -55,6 +56,7 @@
   ./security/rtkit.nix
   ./security/setuid-wrappers.nix
   ./security/sudo.nix
+  ./services/amqp/activemq/default.nix
   ./services/amqp/rabbitmq.nix
   ./services/audio/alsa.nix
   ./services/audio/fuppes.nix
@@ -174,10 +176,14 @@
   ./services/system/kerberos.nix
   ./services/system/nscd.nix
   ./services/system/uptimed.nix
+  ./services/torrent/deluge.nix
+  ./services/torrent/transmission.nix
   ./services/ttys/gpm.nix
   ./services/ttys/agetty.nix
   ./services/web-servers/apache-httpd/default.nix
   ./services/web-servers/jboss/default.nix
+  ./services/web-servers/lighttpd.nix
+  ./services/web-servers/nginx/default.nix
   ./services/web-servers/tomcat.nix
   ./services/x11/desktop-managers/default.nix
   ./services/x11/display-managers/auto.nix
@@ -227,6 +233,7 @@
   ./tasks/filesystems/unionfs-fuse.nix
   ./tasks/filesystems/vfat.nix
   ./tasks/filesystems/xfs.nix
+  ./tasks/filesystems/zfs.nix
   ./tasks/kbd.nix
   ./tasks/lvm.nix
   ./tasks/network-interfaces.nix
