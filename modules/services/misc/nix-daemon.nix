@@ -248,7 +248,7 @@ in
     # List of machines for distributed Nix builds in the format
     # expected by build-remote.pl.
     environment.etc."nix.machines" =
-      { enable = cfg.distributedBuilds && !cfg.manualNixMachines;
+      { enable = cfg.distributedBuilds;
         text =
           concatMapStrings (machine:
             "${machine.sshUser}@${machine.hostName} "
