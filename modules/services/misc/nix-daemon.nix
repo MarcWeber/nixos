@@ -213,7 +213,7 @@ in
 
       binaryCaches = mkOption {
         default = [ http://nixos.org/binary-cache ];
-        type = types.listOf types.string;
+        type = types.list types.string;
         description = ''
           List of binary cache URLs used to obtain pre-built binaries
           of Nix packages.
@@ -223,7 +223,7 @@ in
       trustedBinaryCaches = mkOption {
         default = [ ];
         example = [ http://hydra.nixos.org/ ];
-        type = types.listOf types.string;
+        type = types.list types.string;
         description = ''
           List of binary cache URLs that non-root users can use (in
           addition to those specified using
@@ -257,6 +257,7 @@ in
             + (if machine ? speedFactor then toString machine.speedFactor else "1" )
             + "\n"
           ) cfg.buildMachines;
+      };
 
     systemd.sockets."nix-daemon" =
       { description = "Nix Daemon Socket";
@@ -348,3 +349,4 @@ in
   };
 
 }
+
