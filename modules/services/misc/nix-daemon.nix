@@ -106,7 +106,7 @@ in
 
       distributedBuilds = mkOption {
         default = false;
-        description = "
+        description = ''
           Whether to distribute builds to the machines listed in
           <option>nix.buildMachines</option>.
           If you know that the <option>buildMachines</option> are not
@@ -115,7 +115,7 @@ in
           or consider managing <filename>/etc/nix.machines</filename> manually
           by setting <option>environment.etc."nix/nix.conf".target</option> to
           "etc/nix.conf.sample". Then you can comment unavailable buildmachines.
-        ";
+        '';
       };
 
       daemonNiceLevel = mkOption {
