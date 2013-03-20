@@ -101,7 +101,8 @@ let
       default = attrNames cfg.availableFeatures;
       type = types.listOf types.string;
       description = ''
-        list bash which should be activated by default. Allow system administrators to provide a white list
+        List zsh features which should be activated by default. Allow system
+        administrators to provide a white list
       '';
     };
 
@@ -109,11 +110,13 @@ let
       default = {};
       type = types.attrsOf types.attrs;
       description = ''
-        Provide a scalable way to provide bash features both admins and users
+        Provide a scalable way to provide zsh features both admins and users
         can extend, opt-out etc.
 
-        The default is to load everything by sourcing /etc/bash/setup-all
-        Users can opt-out by defining keys in the bash array before sourcing setup-all:
+        Remember that you have to implement each feature for each shell.
+
+        The default is to load everything by sourcing /etc/zsh/setup-all
+        Users can opt-out by defining keys in the zsh array before sourcing setup-all:
         <code>
         declare -A DID_NIX_ZSH_FEATURES
         DID_NIX_ZSH_FEATURES["FEATURE_NAME"]=1
@@ -157,17 +160,17 @@ in
           target = "zsh/nix-zsh-lib";
         }
 
-        { # default bash interactive setup which get's added to each user's
-          # .bashrc using skel/.bashrc, see below.
+        { # default zsh interactive setup which get's added to each user's
+          # .zshrc using skel/.zshrc, see below.
           # This allows the user to opt-out and administrators to update
           # the implementation
           target = "zsh/setup-all";
-          source = pkgs.writeText "bash-setup-all" setupAll;
+          source = pkgs.writeText "zsh-setup-all" setupAll;
         }
 
         # Be polite: suggest proper default setup - but let user opt-out.
         { target = "skel/.zshrc";
-          source = pkgs.writeText "default-user-bashrc" ''
+          source = pkgs.writeText "default-user-zshrc" ''
             if [ -n "$PS1" ]; then
               source /etc/zsh/setup-all
             fi
@@ -205,7 +208,7 @@ in
       promptInit.interactive_code = config.environment.zsh.promptInit;
 
       # TODO: is it a good idea to always provide pkgs.zshCompletion ?
-      # how does it compare with completion provided by the bash sample code ?
+      # how does it compare with completion provided by the zshrc sample code ?
       completion.interactive_code = ''
           if ${if config.environment.zsh.enableCompletion then "true" else "false" }; then
           # setup completion:
