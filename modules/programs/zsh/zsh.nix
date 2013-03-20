@@ -113,8 +113,11 @@ let
         can extend, opt-out etc.
 
         The default is to load everything by sourcing /etc/bash/setup-all
-        Use that file as source, and copy paste to your .bashrc what you like
-        if you're not satisfied by system default.
+        Users can opt-out by defining keys in the bash array before sourcing setup-all:
+        <code>
+        declare -A DID_NIX_ZSH_FEATURES
+        DID_NIX_ZSH_FEATURES["FEATURE_NAME"]=1
+        </code>
       '';
     };
 

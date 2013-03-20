@@ -10,7 +10,7 @@ bash setup changes:
   You can opt out by defining keys in DID_NIX_BASH_FEATURES, use declare -A
   first (see comment)
 
-- provide /etc/skel/.bashrc which by default sources source-all
+- provide /etc/skel/.bashrc which by default sources setup-all
   This way users can opt-out. Mind that I wrote a shadow patch so that user-add
   creates ~/.bashrc as file, not as symlink
 
@@ -24,7 +24,7 @@ bash setup changes:
 
 zsh:
   implement the very same.
-  Please note that the zshrc hack found in nixpkgs is obsolete now.
+  Please note that the zshrc hack found in nixpkgs is obsolete then.
 
 TODO: provide other implementations (fish etc)
 
