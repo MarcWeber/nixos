@@ -134,7 +134,7 @@ let
     environment.bash.usedFeatures = mkOption {
       default = attrNames cfg.availableFeatures;
       description = ''
-        list bash which should be activated by default. Allow system administrators to provide a white list
+        List bash which should be activated by default. Allow system administrators to provide a white list
       '';
     };
 
@@ -143,6 +143,8 @@ let
       description = ''
         Provide a scalable way to provide bash features both admins and users
         can extend, opt-out etc.
+
+        Remember that you have to implement each feature for each shell.
 
         The default is to load everything by sourcing /etc/bash/setup-all
         Users can opt-out by defining keys in the bash array before sourcing setup-all:
