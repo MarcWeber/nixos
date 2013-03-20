@@ -51,7 +51,7 @@ let
   nixBashLibPath = "/etc/bash/nix-bash-lib";
 
   setupAll = ''
-    # system's default user's ~/.zshrc
+    # system's default user's ~/.bashrc
 
     declare -A DID_NIX_BASH_FEATURES
     # you can opt out from features by declaring NIX_BASH_FEATURES as array and
@@ -145,8 +145,11 @@ let
         can extend, opt-out etc.
 
         The default is to load everything by sourcing /etc/bash/setup-all
-        Use that file as source, and copy paste to your .bashrc what you like
-        if you're not satisfied by system default.
+        Users can opt-out by defining keys in the bash array before sourcing setup-all:
+        <code>
+        declare -A DID_NIX_BASH_FEATURES
+        DID_NIX_BASH_FEATURES["FEATURE_NAME"]=1
+        </code>
       '';
     };
     environment.bash.shellAliases = mkOption {
@@ -283,7 +286,7 @@ in
     };
 
     xmlCatalogFileSupport = {
-      name = "xml-catalog-file-support";
+      name = "xml_catalog_file_support";
       env_code = ''
         source ${nixBashLibPath}
         # not sure how well this scales - this maybe refactored in the future
