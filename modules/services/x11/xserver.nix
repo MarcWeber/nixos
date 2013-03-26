@@ -192,9 +192,8 @@ in
       };
 
       videoDrivers = mkOption {
-        # !!! We'd like "nv" here, but it segfaults the X server.  Idem for
-        # "vmware".
-        default = [ "ati" "cirrus" "intel" "vesa" ];
+        # !!! We'd like "nv" here, but it segfaults the X server.
+        default = [ "ati" "cirrus" "intel" "vesa" "vmware" ];
         example = [ "vesa" ];
         description = ''
           The names of the video drivers that the X server should
@@ -384,7 +383,7 @@ in
 
     environment.x11Packages = mkOption {
       default = [];
-      type = types.list types.package;
+      type = types.listOf types.package;
       description = ''
         List of packages added to the system when the X server is
         activated (<option>services.xserver.enable</option>).
@@ -488,7 +487,7 @@ in
                 ''
                   ln -sf ${kernelPackages.nvidia_x11} /run/opengl-driver
                   ${optionalString (pkgs.stdenv.system == "x86_64-linux" && cfg.driSupport32Bit)
-                    "ln -sf ${pkgs_i686.linuxPackages.nvidia_x11.override { libsOnly = true; kernel = null; } } /run/opengl-driver-32"}
+                    "ln -sf ${pkgs_i686.linuxPackages.nvidia_x11.override { libsOnly = true; kernelDev = null; } } /run/opengl-driver-32"}
                 ''
               else if elem "nvidiaLegacy96" driverNames then
                 "ln -sf ${kernelPackages.nvidia_x11_legacy96} /run/opengl-driver"
