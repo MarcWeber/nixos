@@ -31,10 +31,11 @@ let
       "network.target"
       "nss-lookup.target"
       "nss-user-lookup.target"
-      "syslog.target"
       "time-sync.target"
       #"cryptsetup.target"
       "sigpwr.target"
+      "timers.target"
+      "paths.target"
 
       # Rescue mode.
       "rescue.target"
@@ -108,8 +109,10 @@ let
       "hibernate.target"
       "suspend.target"
       "sleep.target"
+      "hybrid-sleep.target"
       "systemd-hibernate.service"
       "systemd-suspend.service"
+      "systemd-hybrid-sleep.service"
       "systemd-shutdownd.socket"
       "systemd-shutdownd.service"
 
@@ -139,12 +142,13 @@ let
     ];
 
   upstreamWants =
-    [ "basic.target.wants"
+    [ #"basic.target.wants"
       "sysinit.target.wants"
       "sockets.target.wants"
       "local-fs.target.wants"
       "multi-user.target.wants"
       "shutdown.target.wants"
+      "timers.target.wants"
     ];
 
   makeJobScript = name: text:
@@ -271,6 +275,18 @@ let
 
           [Socket]
           ${attrsToSection def.socketConfig}
+        '';
+    };
+
+  timerToUnit = name: def:
+    { inherit (def) wantedBy enable;
+      text =
+        ''
+          [Unit]
+          ${attrsToSection def.unitConfig}
+
+          [Timer]
+          ${attrsToSection def.timerConfig}
         '';
     };
 
@@ -404,6 +420,13 @@ in
       type = types.attrsOf types.optionSet;
       options = [ socketOptions unitConfig ];
       description = "Definition of systemd socket units.";
+    };
+
+    systemd.timers = mkOption {
+      default = {};
+      type = types.attrsOf types.optionSet;
+      options = [ timerOptions unitConfig ];
+      description = "Definition of systemd timer units.";
     };
 
     systemd.mounts = mkOption {
@@ -548,6 +571,7 @@ in
       mapAttrs' (n: v: nameValuePair "${n}.target" (targetToUnit n v)) cfg.targets
       // mapAttrs' (n: v: nameValuePair "${n}.service" (serviceToUnit n v)) cfg.services
       // mapAttrs' (n: v: nameValuePair "${n}.socket" (socketToUnit n v)) cfg.sockets
+      // mapAttrs' (n: v: nameValuePair "${n}.timer" (timerToUnit n v)) cfg.timers
       // listToAttrs (map
                    (v: let n = escapeSystemdPath v.where;
                        in nameValuePair "${n}.mount" (mountToUnit n v)) cfg.mounts);
