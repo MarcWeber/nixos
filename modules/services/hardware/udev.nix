@@ -228,11 +228,15 @@ in
       (isYes "NET")
     ];
 
-    boot.extraKernelParams = [ "firmware_class.path=${config.hardware.firmware}" ];
+    system.activationScripts.setFirmwarePath =
+      ''
+        echo -n ${config.hardware.firmware} 2>/dev/null > /sys/module/firmware_class/parameters/path
+      '';
 
-    boot.extraModprobeConfig = "options firmware_class path=${config.hardware.firmware}";
+    system.activationScripts.clearHotplug =
+      ''
+        echo "" > /proc/sys/kernel/hotplug
+      '';
 
-    system.activationScripts."set-firmware-path" =
-      "echo -n ${config.hardware.firmware} 2>/dev/null > /sys/module/firmware_class/parameters/path";
   };
 }
