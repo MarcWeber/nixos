@@ -48,6 +48,7 @@ mount --bind /dev $mountPoint/dev
 mount --bind /dev/shm $mountPoint/dev/shm
 mount --bind /proc $mountPoint/proc
 mount --bind /sys $mountPoint/sys
+mount --bind /sys/firmware/efi/efivars $mountPoint/sys/firmware/efi/efivars &>/dev/null || true
 mount --bind $mountPoint/etc/nixos $mountPoint/mnt2
 mount --bind /etc $mountPoint/etc
 mount --bind $mountPoint/mnt2 $mountPoint/etc/nixos
@@ -57,6 +58,7 @@ cleanup() {
     mountpoint -q $mountPoint/etc/nixos && umount $mountPoint/etc/nixos
     mountpoint -q $mountPoint/etc && umount $mountPoint/etc
     umount $mountPoint/mnt2
+    umount $mountPoint/sys/firmware/efi/efivars &>/dev/null || true
     umount $mountPoint/sys
     umount $mountPoint/proc
     umount $mountPoint/dev/shm
