@@ -33,8 +33,12 @@ openlog("nixos", "", LOG_USER);
 # Install or update the bootloader.
 if ($action eq "switch" || $action eq "boot") {
     system("@installBootLoader@ $out") == 0 or exit 1;
-    exit 0 if $action eq "boot";
 }
+
+# Just in case the new configuration hangs the system, do a sync now.
+system("@coreutils@/bin/sync") unless ($ENV{"NIXOS_NO_SYNC"} // "") eq "1";
+
+exit 0 if $action eq "boot";
 
 # Check if we can activate the new configuration.
 my $oldVersion = read_file("/run/current-system/init-interface-version", err_mode => 'quiet') // "";
@@ -312,7 +316,7 @@ if (scalar @restart > 0) {
 # that are symlinks to other units.  We shouldn't start both at the
 # same time because we'll get a "Failed to add path to set" error from
 # systemd.
-my @start = unique("default.target", split('\n', read_file($startListFile, err_mode => 'quiet') // ""));
+my @start = unique("default.target", "timers.target", split('\n', read_file($startListFile, err_mode => 'quiet') // ""));
 print STDERR "starting the following units: ", join(", ", sort(@start)), "\n";
 system("@systemd@/bin/systemctl", "start", "--", @start) == 0 or $res = 4;
 unlink($startListFile);
