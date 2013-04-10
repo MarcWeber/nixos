@@ -61,6 +61,7 @@
   ./services/audio/alsa.nix
   ./services/audio/fuppes.nix
   ./services/audio/mpd.nix
+  ./services/backup/almir.nix
   ./services/backup/bacula.nix
   ./services/backup/mysql-backup.nix
   ./services/backup/postgresql-backup.nix
@@ -83,6 +84,7 @@
   ./services/hardware/udev.nix
   ./services/hardware/udisks.nix
   ./services/hardware/upower.nix
+  ./services/hardware/thinkfan.nix
   ./services/logging/klogd.nix
   ./services/logging/logcheck.nix
   ./services/logging/logrotate.nix
