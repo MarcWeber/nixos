@@ -26,42 +26,28 @@ die(){ echo "!>> " $@; exit 1; }
 INFO(){ echo "INFO: " $@; }
 
 prepare(){
-  INFO "Enable networking: copying /etc/resolv.conf"
+  INFO "Enabling networking by copying /etc/resolv.conf to $mountPoint/etc/"
   mkdir -m 0755 -p $mountPoint/etc
   touch /etc/resolv.conf 
   cp /etc/resolv.conf $mountPoint/etc/
 
-  INFO "mounting /proc /sys /dev and / to /host-system"
-  mkdir -m 0755 -p $mountPoint/{dev,proc,sys,host-system}
+  INFO "mounting /proc /sys /dev and / -> /host-system"
+  mkdir -m 0755 -p $mountPoint/{dev,proc,sys,host-system/nix}
   mount --bind /dev $mountPoint/dev
   mount --bind /proc $mountPoint/proc
   mount --bind /sys $mountPoint/sys
-  mount --rbind / $mountPoint/host-system
+  # only mount /nix, so that unmounting is easier
+  mount --rbind /nix $mountPoint/host-system/nix
 }
 
 unprepare(){
   INFO "unmounting /proc /sys /dev and removing /host-system if empty"
-  for d in $mountPoint/{host-system,dev,proc,sys}; do
+  for d in $mountPoint/{host-system/nix,dev,proc,sys}; do
     umount -l "$d"
   done
   # no -fr !!
-  rmdir $mountPoint/host-system
+  rmdir $mountPoint/host-system/nix $mountPoint/host-system
 }
-
-run_cmd(){
-  prepare
-  trap "unprepare" EXIT
-  P="$PATH"
-
-  # /var/run/current-system/ may not exist (yet) in chroot. Thus add main system profile (which exists after installation)
-  # so that its more likely that the tools you want can be found
-  if [ -d "$mountPoint"/nix/var/nix/profiles/system/sw/sbin -a -z "$DONT_TOUCH_PATH" ]; then
-    P="$P":/nix/var/nix/profiles/system/sw/sbin:/nix/var/nix/profiles/system/sw/bin
-  fi
-
-  PATH="$P" chroot $mountPoint $@
-}
-
 
 SCRIPT="$(basename "$0")"
 mountPoint=${mountPoint:-/mnt}
@@ -80,7 +66,20 @@ while [ "$#" > 0 ]; do
     --unprepare) shift; unprepare;;
 
     *)
-      run_cmd "$@"
+
+      prepare
+      trap "unprepare" EXIT
+
+      P="$PATH"
+
+      # /var/run/current-system/ may not exist (yet) in chroot. Thus add main system profile (which exists after installation)
+      # so that its more likely that the tools you want can be found
+      if [ -d "$mountPoint"/nix/var/nix/profiles/system/sw/sbin -a -z "$DONT_TOUCH_PATH" ]; then
+	P="$P":/nix/var/nix/profiles/system/sw/sbin:/nix/var/nix/profiles/system/sw/bin
+      fi
+
+      PATH="$P" chroot $mountPoint $@
+
       exit 0
     ;;
   esac
