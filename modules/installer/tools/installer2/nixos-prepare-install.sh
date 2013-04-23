@@ -1,10 +1,7 @@
 #!/bin/sh
 
-# prepare installation by putting in place unless present:
-# /etc/nixos/nixpkgs
-# /etc/nixos/nixos
-# /etc/nixos/configuration.nix
-
+# provides actions preparing nixos installation such as guessing config,
+# checking out nixos/nixpkgs etc:
 
 set -e
 
@@ -12,26 +9,47 @@ usage(){
   cat << EOF
   script options [list of actions]
 
-  Example usage: nixos-prepare-install create-passwd copy-nix guess-config checkout-sources
+  Example usage: nixos-prepare-install create-nix-conf create-passwd copy-nix guess-config checkout-sources
   default list of actions: $DEFAULTS
 
   actions:
     [none]: /bin/sh symlink is always created if this script is run
 
-    guess-config:     run nixos-hardware-scan > T/configuration.nix (TODO: implement this)
     copy-nix:         (1) copy minimal nix system which can bootstrap the whole
-                      system unless bootstrapping from an archive in which case
-                      file should be in place.
+                          system (live cd only, otherwise files should be in place)
                       (2) registering store paths as valid
-    copy-nixos-bootstrap:
+                      (3)
                       copy the nixos-bootstrap script to /nix/store where it will be
                       garbage collected later
-    copy-sources:     copy repos   into T/
-    checkout-sources: git checkout official repos into T/ (TODO: official manifest should be used!)
-    checkout-sources-git-marcweber: checkout nixos/nixpkgs patches maintained by Marc Weber T/
+
+    guess-config:     run nixos-option --install writing a basic T/configuration.nix,
+                      depends nix contents copied by copy-nix
+
+    # specifying nixos/nixpkgs sources:
+
+    official-source:
+                      Use latest official github.com/nixos/{nixos,nixpkgs} trunk as sources.
+                      trunk usually is very stable
+
+
+    iso-source:       use nixos/nixpkgs sources from iso. More likely to work
+                      without internet connection. Less downloads, however
+                      eventually also less up to date.
+
+    # as alternative you can checkout nixos/nixpkgs into
+    # T/{nixos,nixpkgs} yourself
+
+    # you probably have to run these actions, too:
+
+    create-etc-files: same as $CREATE_ETC_FILES_ACTIONS
 
     create-passwd: some derivations (such as git checkout) requires a /etc/passwd file.
                    create a simple one.
+
+    creaete-group: create initial /etc/group file
+    create-nix-conf: create initial \$mountPoint/etc/nix/nix.conf
+
+    install: run-in-chroot "/nix/store/nixos-bootstrap --install ..." passing all remaining options
 
     where T=$T
       and repos = $ALL_REPOS
@@ -41,8 +59,7 @@ usage(){
              in which case target is renamed before action is run
     --dir-ok: allow installing into directory (omits is mount point check)
 
-    --debug: set -x
-
+    --debug|-x: set -x
 
 EOF
   exit 1
@@ -50,6 +67,7 @@ EOF
 
 
 INFO(){ echo "INFO: " $@; }
+WARNING(){ echo "WARNING: " $@; }
 CMD_ECHO(){ echo "running $@"; $@; }
 
 # = configuration =
@@ -61,15 +79,16 @@ mountPoint=${mountPoint:-/mnt}
 if [ -e $mountPoint/README-BOOTSTRAP-NIXOS ]; then
   INFO "$mountPoint/README-BOOTSTRAP-NIXOS found, assuming your're bootstrapping from an archive. Nix files should be in place"
   FROM_ARCHIVE=1
-  DEFAULTS="guess-config copy-nix"
+  DEFAULTS="copy-nix guess-config official-source create-nix-conf"
 else
   FROM_ARCHIVE=0
-  DEFAULTS="guess-config copy-nixos-bootstrap copy-nix copy-sources"
+  DEFAULTS="copy-nix guess-config official-source create-nix-conf"
 fi
+
+CREATE_ETC_FILES_ACTIONS="create-passwd create-group create-nix-conf"
 
 backupTimestamp=$(date "+%Y%m%d%H%M%S")
 SRC_BASE=${SRC_BASE:-"/etc/nixos"}
-SVN_BASE="https://svn.nixos.org/repos/nix"
 MUST_BE_MOUNTPOINT=${MUST_BE_MOUNTPOINT:-1}
 T="$mountPoint/etc/nixos"
 
@@ -80,15 +99,23 @@ RUN_IN_CHROOT=$mountPoint/nix/store/run-in-chroot
 # iso image case:
 [ -f $RUN_IN_CHROOT ] || RUN_IN_CHROOT=run-in-chroot
 
-die(){ echo "!>> " $@; exit 1; }
+die(){ echo "!>>  $@. Exiting"; exit 1; }
 
 ## = read options =
 # actions is used by main loop at the end
 ACTIONS=""
 # check and handle options:
-for a in $@; do
+while [ "$#" -gt 0 ]; do
+  a="$1"; shift 1
   case "$a" in
-    copy-nix|copy-nixos-bootstrap|guess-config|copy-sources|checkout-sources|checkout-sources-git-marcweber|create-passwd)
+    install)
+      ACTIONS="$ACTIONS install"
+      break;
+    ;;
+    create-etc-files)
+      ACTIONS="$ACTIONS $CREATE_ETC_FILES_ACTIONS"
+    ;;
+    copy-nix|guess-config|copy-sources|checkout-sources|create-passwd|create-group|create-nix-conf|*-source)
       ACTIONS="$ACTIONS $a"
     ;;
     --dir-ok)
@@ -97,7 +124,7 @@ for a in $@; do
     --force)
       FORCE_ACTIONS=1
     ;;
-    --debug)
+    --debug|-x)
       set -x
     ;;
     *)
@@ -140,6 +167,9 @@ createDirs(){
   mkdir -m 0755 -p $mountPoint/etc/nixos
   mkdir -m 1777 -p $mountPoint/nix/store
 
+  # without this you won't be able to set a password?
+  touch $mountPoint/etc/shadow
+
   # Create the required /bin/sh symlink; otherwise lots of things
   # (notably the system() function) won't work.
   mkdir -m 0755 -p $mountPoint/bin
@@ -152,34 +182,51 @@ createDirs(){
 
 }
 
+maybe_copy_repo(){
+  local src=$(readlink -f $(@nix@/bin/nix-instantiate --find-file $1))
+  if [ -e "$T/$1" ]; then
+    WARNING "not copying iso's nixos to $T/nixos because it already exists"
+  else
+    if [ -z "$src" ]; then
+      WARNING "can't copy $1, source not found - try action official-source instead"
+    else
+      CMD_ECHO rsync -a -r $src/ "$T/$1/"
+    fi
+  fi
+}
+
+executable(){ type -p $1 &> /dev/null; }
+
+provide(){
+  executable $1 || {
+    if executable nix-env; then
+      INFO "installing $1 via nix-env"
+      nix-env -i git
+    else
+      die "executable $1 not found"
+    fi
+  }
+}
 
 realise_repo(){
   local action=$1
-  local repo=$2
 
   createDirs
 
   case "$action" in
-    copy-sources)
-      local repo_sources="${repo}_SOURCES"
-      rsync -a -r "${SRC_BASE}/$repo" "$T"
+    iso-source)
+      INFO "copying nixos/nixpkgs source from iso"
+      maybe_copy_repo nixos
+      maybe_copy_repo nixpkgs
     ;;
-    checkout-sources)
-      INFO "checking out $repo"
-      local git_base=https://github.com/nixos
-      CMD_ECHO git clone --depth=1 $url "$T/$repo"
+    official-source)
+      local git_base=https://github.com/NixOS
+      provide git
+      CMD_ECHO git clone --depth=1 $git_base/nixos.git "$T/nixos"
+      CMD_ECHO git clone --depth=1 $git_base/nixpkgs.git "$T/nixpkgs"
     ;;
-    checkout-sources-git-marcweber)
-      INFO "checking out $repo"
-      local git_base=https://github.com/MarcWeber
-      local url=$git_base/$repo.git
-      local branch
-      case "$repo" in
-        nixos)   branch=experimental/marc ;;
-        nixpkgs) branch=experimental/marc ;;
-      esac
-      INFO "checkout out $repo"
-      CMD_ECHO git clone --depth=1 -b $branch $url "$T/$repo"
+    *)
+      die "unkown source $action"
     ;;
   esac
 
@@ -210,17 +257,10 @@ for a in $ACTIONS; do
         INFO "creating simple configuration file"
         # does not work in chroot ? (readlink line 71 which is /sys/bus/pci/devices/0000:00:1a.0/driver/module -> ../../../../module/uhci_hcd here
         # $mountPoint/nix/store/run-in-chroot "@nixosHardwareScan@/bin/nixos-hardware-scan > /etc/nixos/configuration.nix"
-        perl $mountPoint/@nixosHardwareScan@/bin/nixos-hardware-scan > $mountPoint/etc/nixos/configuration.nix
-        echo
-        INFO "Note: you can start customizing $config while remaining actions will are being executed"
-        echo
-      }
-    ;;
 
-    copy-nixos-bootstrap)
-      createDirs
-      # this script will be garbage collected somewhen:
-      cp @nixosBootstrap@/bin/nixos-bootstrap $mountPoint/nix/store/
+        # use append to not override existing configuration.nix !
+        $mountPoint/@nixosOption@/bin/nixos-option --install
+      }
     ;;
 
     copy-nix)
@@ -233,12 +273,18 @@ for a in $ACTIONS; do
 
         for i in `cat $NIX_CLOSURE | pathsFromGraph`; do
             echo "  $i"
-            rsync -a $i $mountPoint/nix/store/
+            # this is only necessary when using the install cd, otherwise files should be in place"
+            [ -d "$mountPoint/nix/store/$i" ] || rsync -a $i $mountPoint/nix/store/
         done
+
+        [ -e $mountPoint/nix/store/nixos-bootstrap ] || {
+          # iso only, install archive should have it in place
+          cp @nixosBootstrap@/bin/nixos-bootstrap $mountPoint/nix/store/
+        }
 
       fi
 
-      [ -e "$NIX_CLOSURE" ] || die "Couldn't find nixClosure $NIX_CLOSURE anywhere. Can't register inital store paths valid. Exiting"
+      [ -e "$NIX_CLOSURE" ] || die "Couldn't find nixClosure $NIX_CLOSURE anywhere. Can't register inital store paths valid."
 
       INFO "registering bootstrapping store paths as valid so that they won't be rebuild"
       # Register the paths in the Nix closure as valid.  This is necessary
@@ -251,12 +297,42 @@ for a in $ACTIONS; do
 
     ;;
 
+    create-nix-conf)
+
+      # binary-cache is important, probably it should be an option?
+      # what about the other options?
+      mkdir -p $mountPoint/etc/nix
+      if [ -e $mountPoint/etc/nix/nix.conf ]; then
+        WARNING "not touching $mountPoint/etc/nix/nix.conf, it already exists!"
+      else
+        cat >> $mountPoint/etc/nix/nix.conf << EOF
+build-users-group = nixbld
+build-max-jobs = 1
+# build-use-chroot = true
+binary-caches = http://nixos.org/binary-cache
+# trusted-binary-caches =
+EOF
+    fi
+
+    ;;
+    # should be derived from configuration.nix ..
+    create-group)
+        if [ -x "$mountPoint/etc/group" ]; then
+          echo "not overriding $mountPoint/etc/group"
+        else
+    cat > "$mountPoint/etc/group" << EOF
+nixbld:x:30000:nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10
+EOF
+        fi
+
+
+    ;;
     create-passwd)
         if [ -x "$mountPoint/etc/passwd" ]; then
           echo "not overriding $mountPoint/etc/passwd"
         else
     cat > "$mountPoint/etc/passwd" << EOF
-root:x:0:0:System administrator:/root:/var/run/current-system/sw/bin/zsh
+root:x:0:0:System administrator:/root:/var/run/current-system/sw/bin/bash
 nobody:x:65534:65534:Unprivileged account (don't use!):/var/empty:/noshell
 nixbld1:x:30001:30000:Nix build user 1:/var/empty:/noshell
 nixbld2:x:30002:30000:Nix build user 2:/var/empty:/noshell
@@ -272,25 +348,11 @@ EOF
         fi
 
     ;;
-
-    copy-sources|checkout-sources|checkout-sources-git-marcweber)
-
-      for repo in $ALL_REPOS; do
-        target_realised "$T/$repo" || realise_repo $a $repo
-      done
-
+    install)
+      $RUN_IN_CHROOT "/nix/store/nixos-bootstrap $@"
+    ;;
+    *-source)
+      realise_repo $a
     ;;
   esac
 done
-
-if [ -e "$T/nixos" ] && [ -e "$T/nixpkgs" ] && [ -e "$T/configuration.nix" ]; then
-  cat << EOF
-    To realise your NixOS installtion execute:
-
-    bash $RUN_IN_CHROOT "/nix/store/nixos-bootstrap --install -j2 --keep-going"
-EOF
-else
-  for t in "$T/configuration.nix" "$T/nixpkgs" "$T/configuration.nix"; do
-    INFO "you can't start because $t is missing"
-  done
-fi
