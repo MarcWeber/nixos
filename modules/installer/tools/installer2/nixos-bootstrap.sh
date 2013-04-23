@@ -6,10 +6,15 @@ set -e
 
 # We don't have locale-archive in the chroot, so clear $LANG.
 export LANG=
+export LC_ALL=
+export LC_TIME=
 
 export PATH=@coreutils@/bin
 
-usage(){
+# There is no daemon in the chroot
+unset NIX_REMOTE
+
+usage_exit(){
   cat << EOF
   script --install [--fast] [--no-grub]
 
@@ -52,18 +57,21 @@ INFO(){ echo "INFO: " $@; }
 # == configuration ==
 
 HOME=${HOME:-/root}
-NIXOS=${NIXOS:-/etc/nixos/nixos}
-NIXPKGS=${NIXPKGS:-/etc/nixos/nixpkgs}
-NIXOS_CONFIG=${NIXOS_CONFIG:-/etc/nixos/configuration.nix}
+
+# if you need different default values copy this script and adjust
+export NIXOS_CONFIG=${NIXOS_CONFIG:-/etc/nixos/configuration.nix}
+export NIX_PATH="nixpkgs=/etc/nixos/nixpkgs:nixos=/etc/nixos/nixos:nixos-config=$NIXOS_CONFIG"
+
 NIXOS_PULL=${NIXOS_PULL:-1}
-NIXOS_INSTALL_GRUB=${NIXOS_INSTALL_GRUB:-1} 
+NIXOS_INSTALL_GRUB=${NIXOS_INSTALL_GRUB:-1}
 
 ps="run-in-chroot"
 
 check "$NIXOS_CONFIG"
-check "$NIXOS/modules"  "nixos repo not found"
-check "$NIXPKGS/pkgs/top-level/all-packages.nix"  "nixpgks repo not found"
-for d in /dev /sys /proc; do
+
+check "/etc/nixos/nixos/modules"  "nixos repo not found"
+check "/etc/nixos/nixpkgs/pkgs/top-level/all-packages.nix"  "nixpgks repo not found"
+for d in /dev /dev/shm /sys /proc; do
   check "$d" "It should have been mounted by $ps"
 done
 
@@ -89,15 +97,17 @@ for arg in $@; do
           # keeping it unset will still install grub because grub version appears to the script to be changed
           NIXOS_INSTALL_GRUB=0;;
     --debug)       set -x;;
-    -j*|--keep-going|--show-trace|--fallback|--show-trace) 
+    -j*|--keep-going|--show-trace|--fallback)
                    NIX_ENV_ARGS="$NIX_ENV_ARGS $arg";;
     --fast)        NIXOS_PULL=0;;
-    *)             usage;
+    *)
+        INFO "unexpected argument $arg, showing usage and exiitng"
+        usage_exit;;
   esac
 done
 
 if [ "$INSTALL" != 1 ]; then
-  usage
+  usage_exit
 fi
 
 
@@ -116,17 +126,32 @@ mkdir -m 0755 -p \
     /nix/var/nix/db \
     /nix/var/log/nix/drvs
 
-# Do a nix-pull to speed up building.
-if test -n "@nixpkgsURL@" -a ${NIXOS_PULL} != 0; then
-    @nix@/bin/nix-pull @nixpkgsURL@/MANIFEST || true
+mkdir -m 1775 -p /nix/store
+
+PERL5LIB=@nix@/lib/perl5/site_perl
+build_users_group=$(@perl@/bin/perl -e 'use Nix::Config; Nix::Config::readConfig; print $Nix::Config::config{"build-users-group"};')
+if test -n "$build_users_group"; then
+    chown root:"$build_users_group" /nix/store
+else
+    chown root /nix/store
+fi
+
+export NIX_CONF_DIR=/tmp
+
+if test -n "$NIXOS_PREPARE_CHROOT_ONLY"; then
+    echo "User requested only to prepare chroot. Exiting."
+    exit 0
 fi
 
 # Build the specified Nix expression in the target store and install
 # it into the system configuration profile.
 INFO "building the system configuration..."
+
+echo "building the system configuration..."
+export NIXOS_CONFIG=
 @nix@/bin/nix-env \
     -p /nix/var/nix/profiles/system \
-    -f "$NIXOS" \
+    -f '<nixos>' \
     --set -A system \
     $NIX_ENV_ARGS
 
@@ -136,7 +161,6 @@ touch /etc/NIXOS
 
 # Grub needs an mtab.
 ln -sfn /proc/mounts /etc/mtab
-
 
 # Switch to the new system configuration.  This will install Grub with
 # a menu default pointing at the kernel/initrd/etc of the new

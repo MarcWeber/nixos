@@ -34,6 +34,7 @@ prepare(){
   INFO "mounting /proc /sys /dev and / -> /host-system"
   mkdir -m 0755 -p $mountPoint/{dev,proc,sys,host-system/nix}
   mount --bind /dev $mountPoint/dev
+  mount --bind /dev/shm $mountPoint/dev/shm
   mount --bind /proc $mountPoint/proc
   mount --bind /sys $mountPoint/sys
   # only mount /nix, so that unmounting is easier
@@ -42,7 +43,7 @@ prepare(){
 
 unprepare(){
   INFO "unmounting /proc /sys /dev and removing /host-system if empty"
-  for d in $mountPoint/{host-system/nix,dev,proc,sys}; do
+  for d in $mountPoint/{host-system/nix,dev/shm,dev,proc,sys}; do
     umount -l "$d"
   done
   # no -fr !!
