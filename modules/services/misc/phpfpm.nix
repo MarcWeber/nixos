@@ -1,5 +1,121 @@
 { config, pkgs, ... }:
 
+/*
+
+What does this php-fpm module provide?
+
+Short intro: php-fpm means running PHP outside of apache, with proper linux
+user id/group. The php-fdpm daemon will spawn/kill processes as needed.
+Comparison chart: http://php-fpm.org/about/#why
+
+How does it work? One php-fpm daemon supervises multiple pools.
+However some options like xdebug cannot be configured for an individual pool,
+thus if you want one project to be debugcgable you have to create a new
+config/daemon pair.
+
+This is what this module is about:
+You feed in a list of PHP pool configurations - and the module will group
+groupable pools so that they can be supervisd by the same daemon.
+Eg if you enable xdebug for one user you'll get two php-fpm services
+automatically and everything should just work.
+
+Now that systemd exists each daemon has
+- a name ( .service file)
+- many pools (each has a socket clients like apache connect to)
+
+And that's what the functions daemonIdFun, socketPathFun are about: given a
+configuration they derive a name.  If you know that you're using one PHP-5.3
+configuration you can return "5.3", however you must ensure that different
+daemon configs don't get the same name !  Thus the default implementation is
+using a short hash based on the configuration.  Downside is that log file names
+change if you configure PHP differently.
+
+Obviously the socket paths are used by the systemd configuration and by the
+apache/lighthttpd/nginx web server configurations.
+
+simple usage example illustrating how you can access the same local web applications
+using two different domains php53 and php54 to test both versions, but
+debugging is only enable for php 5.3
+
+    let
+
+        phpfpmPools =
+        let environment = {
+          # LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive";
+        };
+        in {
+            "php54" = {
+              daemonCfg.php = pkgs.php5_4fpm;
+              # daemonCfg.id = "5.4"; # optional
+              poolItemCfg = {
+               inherit environment;
+               user  = "user";
+               group  = "users";
+               listen = { owner = config.services.httpd.user; group = config.services.httpd.group; mode = "0700"; };
+               slowlog = "/pr/www/slow-log-5.4";
+              };
+            };
+
+            "php53" = rec {
+              daemonCfg.php = pkgs.php5_3fpm;
+              daemonCfg.xdebug = { enable = true; remote_port = "9000"; };
+              daemonCfg.phpIniLines = ''
+              additional php ini lines
+              '';
+              # daemonCfg.id = "5.3"; # optional
+              poolItemCfg = {
+               # inherit environment;
+               user  = "user";
+               group  = "users";
+               listen = { owner = config.services.httpd.user; group = config.services.httpd.group; mode = "0700"; };
+               slowlog = "/pr/www/slow-log-5.3";
+            };
+        };
+
+    in
+
+    {pkgs , config, ...} : {
+
+      services.phpfpm.pools = lib.attrValues phpfpmPools;
+
+      httpd.extraConfig = ''
+          FastCGIExternalServer /dev/shm/php5.3.fcgi -socket ${config.services.phpfpm.socketPathFun phpfpmPools.php53} -flush -idle-timeout 300
+          FastCGIExternalServer /dev/shm/php5.4.fcgi -socket ${config.services.phpfpm.socketPathFun phpfpmPools.php54} -flush -idle-timeout 300
+      '';
+
+      httpd.virtualHosts =
+           (
+           map (php: let documentRoot = "/pr/www"; in {
+             enable = true;
+             documentRoot = documentRoot;
+             hostName = php.domain;
+            extraConfig = ''
+            RewriteEngine On
+
+            AddType application/x-httpd-php .php
+            AddType application/x-httpd-php .php5
+            Action application/x-httpd-php /x/php.fcgi
+            Alias /x/php.fcgi /dev/shm/php${php.version}.fcgi
+
+            <Directory ${documentRoot}>
+               DirectoryIndex index.php index.html
+               Options +ExecCGI
+               Order allow,deny
+               Allow from all
+               AllowOverride All
+            </Directory>
+
+            '';
+           }) [
+            { domain = "php53"; version = "5.3"; }
+            { domain = "php54"; version = "5.4"; }
+           ]
+           );
+
+    }
+
+*/
+
 
 let
   inherit (builtins) listToAttrs head baseNameOf unsafeDiscardStringContext toString;
@@ -134,7 +250,7 @@ in {
         example = [
           rec {
 
-            ### php-fpm daemon options: If they differ multiple daemons will be started
+            ### php-fpm daemon options: If contents differ multiple daemons will be started
             daemonCfg = {
 
               ### id
@@ -154,6 +270,13 @@ in {
               #   php_flag[name]=on/off
               #   php_admin_value[str_option]="127.0.0.1"
               # which should be preferred so that less php-fpm daemons have to be started
+              # These lines are appended to the default configuartion shipping with PHP
+              # unless phpIniFile is given
+              #
+              # phpIniLines appends lines to the default php.ini file shipping with PHP.
+              # You can override everything by either setting
+              # - phpIniFile (function returning file, see sample in this file)
+              # - phpIni (must be a file), eg phpIniFile = pkgs.writeFile ...
               phpIniLines = ''
               '';
 
@@ -167,8 +290,6 @@ in {
                 # profileDir = id: "/tmp/xdebug-profiler-dir-${id}"; # setting profiler_output_dir
               };
 
-              # optional: override phpIniFile
-              # phpIni = phpIniFile;
             };
 
             ### php-fpm per pool options
