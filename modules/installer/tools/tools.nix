@@ -32,8 +32,12 @@ let
   # rewrite of nixosInstall: each tool does exactly one job.
   # So they get more useful.
   installer2 =
-  let nixClosure = pkgs.runCommand "closure"
-        {exportReferencesGraph = ["refs" config.environment.nix];}
+  let
+      # probably tihs can be done by passing multiple paths to exportReferencesGraph ?
+      closure = pkgs.buildEnv { name = "nix-bootstrap"; paths = [ config.environment.nix nixosHardwareScan nixosOption ]; };
+
+      nixClosure = pkgs.runCommand "closure"
+        {exportReferencesGraph = [ "refs" closure ];}
         "cp refs $out";
 
       nix = config.environment.nix;
@@ -43,7 +47,7 @@ let
       name = "nixos-prepare-install";
       src = ./installer2/nixos-prepare-install.sh;
 
-      inherit nix nixClosure nixosBootstrap;
+      inherit nix nixClosure nixosBootstrap nixosHardwareScan nixosOption;
     };
 
     runInChroot = makeProg {
@@ -55,7 +59,7 @@ let
       name = "nixos-bootstrap";
       src = ./installer2/nixos-bootstrap.sh;
 
-      inherit (pkgs) coreutils;
+      inherit (pkgs) coreutils perl;
       inherit nixClosure nix;
 
       # TODO shell ?
@@ -93,6 +97,7 @@ let
   nixosOption = makeProg {
     name = "nixos-option";
     src = ./nixos-option.sh;
+    inherit nixosHardwareScan;
   };
 
   nixosVersion = makeProg {
@@ -146,7 +151,6 @@ in
         #nixosGenSeccureKeys
         nixosOption
         nixosVersion
-
 
         installer2.runInChroot
         installer2.nixosPrepareInstall
