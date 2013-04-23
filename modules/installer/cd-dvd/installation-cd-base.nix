@@ -63,4 +63,6 @@ in
   # To speed up installation a little bit, include the complete stdenv
   # in the Nix store on the CD.
   isoImage.storeContents = [ pkgs.stdenv pkgs.busybox ];
+
+  environment.shellInit = "export mountPoint=/mnt";
 }
