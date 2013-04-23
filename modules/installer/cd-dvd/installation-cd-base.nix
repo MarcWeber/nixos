@@ -64,7 +64,7 @@ in
   # in the Nix store on the CD.
   isoImage.storeContents = [ pkgs.stdenv pkgs.busybox ];
 
-  environment.bash.availableFeatures.defineMountPoint.lib = "export mountPoint=/mnt";
+  environment.shellInit = "export mountPoint=/mnt";
 
   # Because github.com/nixos/* are official repositories make it easy to check them out using git
   environment.systemPackages = [ pkgs.git ];
