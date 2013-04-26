@@ -269,7 +269,10 @@ in {
 
       pools = mkOption {
         default = [];
-        example = [
+        example = [];
+	  /* a typical list item looks like this - I don't think it makes sense to show
+	     this example in generated docs - its too big
+	     
           rec {
 
             ### php-fpm daemon options: If contents differ multiple daemons will be started
@@ -341,7 +344,7 @@ in {
 
             };
           }
-        ];
+	*/
 
         description = ''
 	  Examples and more detailed explanation about the
