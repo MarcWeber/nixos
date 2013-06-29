@@ -271,7 +271,7 @@ in
 
             local nullglobStatus=$(shopt -p nullglob)
             shopt -s nullglob
-            for s in "$profile"/etc/bash_completion.d/*; do
+            for s in "$profile"/etc/bash_completion.d/* "$p/share/bash-completion/completions/"*; do
               local base="''${s/*\//}"
               [[
                 -z "''${NIX_COMPL_SCRIPT_SOURCED[$base]}" &&
