@@ -1,4 +1,9 @@
-[ ./config/fonts.nix
+[
+  ./config/fonts/corefonts.nix
+  ./config/fonts/fontconfig.nix
+  ./config/fonts/fontdir.nix
+  ./config/fonts/fonts.nix
+  ./config/fonts/ghostscript.nix
   ./config/gnu.nix
   ./config/i18n.nix
   ./config/krb5.nix
@@ -36,6 +41,7 @@
   ./misc/nixpkgs.nix
   ./misc/passthru.nix
   ./misc/version.nix
+  ./programs/atop.nix
   ./programs/bash/bash.nix
   ./programs/bash/command-not-found.nix
   ./programs/blcr.nix
@@ -47,6 +53,7 @@
   ./programs/wvdial.nix
   ./rename.nix
   ./security/apparmor.nix
+  ./security/apparmor-suid.nix
   ./security/ca.nix
   ./security/pam.nix
   ./security/pam_usb.nix
@@ -82,6 +89,7 @@
   ./services/hardware/sane.nix
   ./services/hardware/udev.nix
   ./services/hardware/udisks.nix
+  ./services/hardware/udisks2.nix
   ./services/hardware/upower.nix
   ./services/hardware/thinkfan.nix
   ./services/logging/klogd.nix
@@ -96,6 +104,7 @@
   ./services/mail/postfix.nix
   ./services/mail/spamassassin.nix
   ./services/misc/autofs.nix
+  ./services/misc/cgminer.nix
   ./services/misc/disnix.nix
   ./services/misc/felix.nix
   ./services/misc/folding-at-home.nix
@@ -124,6 +133,7 @@
   ./services/networking/bind.nix
   ./services/networking/bitlbee.nix
   ./services/networking/cntlm.nix
+  ./services/networking/chrony.nix
   ./services/networking/ddclient.nix
   #./services/networking/dhclient.nix
   ./services/networking/dhcpcd.nix
@@ -132,6 +142,7 @@
   ./services/networking/ejabberd.nix
   ./services/networking/firewall.nix
   ./services/networking/flashpolicyd.nix
+  ./services/networking/freenet.nix
   ./services/networking/git-daemon.nix
   ./services/networking/gnunet.nix
   ./services/networking/gogoclient.nix
@@ -184,14 +195,18 @@
   ./services/ttys/agetty.nix
   ./services/web-servers/apache-httpd/default.nix
   ./services/web-servers/jboss/default.nix
-  ./services/web-servers/lighttpd.nix
+  ./services/web-servers/lighttpd/default.nix
+  ./services/web-servers/lighttpd/cgit.nix
+  ./services/web-servers/lighttpd/gitweb.nix
   ./services/web-servers/nginx/default.nix
   ./services/web-servers/tomcat.nix
+  ./services/web-servers/varnish/default.nix
   ./services/x11/desktop-managers/default.nix
   ./services/x11/display-managers/auto.nix
   ./services/x11/display-managers/default.nix
   ./services/x11/display-managers/kdm.nix
   ./services/x11/display-managers/slim.nix
+  ./services/x11/display-managers/lightdm.nix
   ./services/x11/hardware/multitouch.nix
   ./services/x11/hardware/synaptics.nix
   ./services/x11/hardware/wacom.nix
