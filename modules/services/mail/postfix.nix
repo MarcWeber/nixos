@@ -487,7 +487,6 @@ in
         };
 
         environment = {
-          TZ = config.time.timeZone;
           PATH="${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.gnugrep}/bin:${pkgs.gnused}/bin:${pkgs.gawk}/bin";
         };
       };

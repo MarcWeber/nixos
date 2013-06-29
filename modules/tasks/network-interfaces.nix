@@ -166,7 +166,7 @@ in
       example = "text=anything; echo You can put $text here.";
       description = ''
         Shell commands to be executed at the end of the
-        <literal>network-interfaces</literal> Upstart job.  Note that if
+        <literal>network-setup</literal> systemd service.  Note that if
         you are using DHCP to obtain the network configuration,
         interfaces may not be fully configured yet.
       '';
@@ -244,6 +244,7 @@ in
         pkgs.iputils
         pkgs.nettools
         pkgs.wirelesstools
+        pkgs.iw
         pkgs.rfkill
         pkgs.openresolv
       ]
@@ -277,7 +278,7 @@ in
             script =
               ''
                 # Set the static DNS configuration, if given.
-                cat | ${pkgs.openresolv}/sbin/resolvconf -a static <<EOF
+                ${pkgs.openresolv}/sbin/resolvconf -m 1 -a static <<EOF
                 ${optionalString (cfg.nameservers != [] && cfg.domain != "") ''
                   domain ${cfg.domain}
                 ''}
@@ -371,7 +372,8 @@ in
           { description = "Virtual Network Interface ${i.name}";
             requires = [ "dev-net-tun.device" ];
             after = [ "dev-net-tun.device" ];
-            wantedBy = [ "network.target" "sys-subsystem-net-devices-${i.name}.device" ];
+            wantedBy = [ "network.target" ];
+            requiredBy = [ "sys-subsystem-net-devices-${i.name}.device" ];
             serviceConfig =
               { Type = "oneshot";
                 RemainAfterExit = true;
@@ -423,12 +425,16 @@ in
          // mapAttrs createBridgeDevice cfg.bridges
          // { "network-setup" = networkSetup; };
 
-    # Set the host name in the activation script.  Don't clear it if
-    # it's not configured in the NixOS configuration, since it may
-    # have been set by dhclient in the meantime.
+    # Set the host and domain names in the activation script.  Don't
+    # clear it if it's not configured in the NixOS configuration,
+    # since it may have been set by dhclient in the meantime.
     system.activationScripts.hostname =
       optionalString (config.networking.hostName != "") ''
         hostname "${config.networking.hostName}"
+      '';
+    system.activationScripts.domain =
+      optionalString (config.networking.domain != "") ''
+        domainname "${config.networking.domain}"
       '';
 
     services.udev.extraRules =

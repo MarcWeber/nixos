@@ -7,6 +7,8 @@ let
 
   fileSystems = attrValues config.fileSystems;
 
+  prioOption = prio: optionalString (prio !=null) " pri=${toString prio}";
+
   fileSystemOpts = { name, ... }: {
 
     options = {
@@ -167,7 +169,7 @@ in
 
         # Swap devices.
         ${flip concatMapStrings config.swapDevices (sw:
-            "${sw.device} none swap\n"
+            "${sw.device} none swap${prioOption sw.priority}\n"
         )}
       '';
 
@@ -189,7 +191,7 @@ in
           { description = "Initialisation of Filesystem ${fs.device}";
             wantedBy = [ "${mountPoint'}.mount" ];
             before = [ "${mountPoint'}.mount" "systemd-fsck@${device'}.service" ];
-            require = [ "${device'}.device" ];
+            requires = [ "${device'}.device" ];
             after = [ "${device'}.device" ];
             path = [ pkgs.utillinux ] ++ config.system.fsPackages;
             script =
