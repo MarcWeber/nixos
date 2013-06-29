@@ -17,7 +17,7 @@ in
   options = {
 
     services.atd.enable = mkOption {
-      default = true;
+      default = false;
       description = ''
         Whether to enable the `at' daemon, a command scheduler.
       '';
@@ -45,7 +45,7 @@ in
       group = "atd";
       setuid = true;
       setgid = true;
-    }) [ "at" "atq" "atrm" ];
+    }) [ "at" "atq" "atrm" "batch" ];
 
     environment.systemPackages = [ at ];
 

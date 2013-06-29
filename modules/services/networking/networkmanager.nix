@@ -89,9 +89,12 @@ in {
       { source = configFile;
         target = "NetworkManager/NetworkManager.conf";
       }
+      { source = "${networkmanager_openvpn}/etc/NetworkManager/VPN/nm-openvpn-service.name";
+        target = "NetworkManager/VPN/nm-openvpn-service.name";
+      }
     ];
 
-    environment.systemPackages = cfg.packages;
+    environment.systemPackages = cfg.packages ++ [ networkmanager_openvpn ];
 
     users.extraGroups = singleton {
       name = "networkmanager";
@@ -124,9 +127,14 @@ in {
       wireless.enable = false;
     };
 
+    powerManagement.resumeCommands = ''
+      systemctl restart NetworkManager
+    '';
+
     security.polkit.permissions = polkitConf;
 
-    services.dbus.packages = cfg.packages;
+    # openvpn plugin has only dbus interface
+    services.dbus.packages = cfg.packages ++ [ networkmanager_openvpn ];
 
     services.udev.packages = cfg.packages;
   };

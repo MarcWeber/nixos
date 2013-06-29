@@ -76,6 +76,12 @@ rec {
       '';
     };
 
+    requiredBy = mkOption {
+      default = [];
+      types = types.listOf types.string;
+      description = "Units that require (i.e. depend on and need to go down with) this unit.";
+    };
+
     wantedBy = mkOption {
       default = [];
       types = types.listOf types.string;
@@ -208,6 +214,16 @@ rec {
 
 
   socketOptions = unitOptions // {
+
+    listenStreams = mkOption {
+      default = [];
+      types = types.listOf types.string;
+      example = [ "0.0.0.0:993" "/run/my-socket" ];
+      description = ''
+        For each item in this list, a <literal>ListenStream</literal>
+        option in the <literal>[Socket]</literal> section will be created.
+      '';
+    };
 
     socketConfig = mkOption {
       default = {};
