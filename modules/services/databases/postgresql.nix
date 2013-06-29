@@ -161,10 +161,7 @@ in
         wantedBy = [ "multi-user.target" ];
         after = [ "network.target" ];
 
-        environment =
-          { TZ = config.time.timeZone;
-            PGDATA = cfg.dataDir;
-          };
+        environment.PGDATA = cfg.dataDir;
 
         path = [ pkgs.su postgresql ];
 
@@ -193,7 +190,7 @@ in
 
             # Give Postgres a decent amount of time to clean up after
             # receiving systemd's SIGINT.
-            TimeoutSec = 60;
+            TimeoutSec = 120;
           };
 
         # Wait for PostgreSQL to be ready to accept connections.

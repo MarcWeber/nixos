@@ -179,14 +179,17 @@ in
         # a USB keyboard.
         "uhci_hcd"
         "ehci_hcd"
+        "ehci_pci"
         "ohci_hcd"
+        "xhci_hcd"
         "usbhid"
+        "hid_generic"
 
         # Unix domain sockets (needed by udev).
         "unix"
 
         # Misc. stuff.
-        "pcips2" "serio" "atkbd" "xtkbd"
+        "pcips2" "xtkbd"
 
         # To wait for SCSI devices to appear.
         "scsi_wait_scan"

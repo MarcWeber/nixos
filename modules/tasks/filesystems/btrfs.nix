@@ -17,9 +17,18 @@ in
 
     boot.initrd.extraUtilsCommands = mkIf inInitrd
       ''
-        cp -v ${pkgs.btrfsProgs}/bin/btrfsck $out/bin
+        mkdir -p $out/bin
         cp -v ${pkgs.btrfsProgs}/bin/btrfs $out/bin
+        ln -sv btrfs $out/bin/btrfsck
         ln -sv btrfsck $out/bin/fsck.btrfs
+        # !!! Increases uncompressed initrd by 240k
+        cp -pv ${pkgs.zlib}/lib/libz.so* $out/lib
+        cp -pv ${pkgs.lzo}/lib/liblzo2.so* $out/lib
+      '';
+
+    boot.initrd.extraUtilsCommandsTest = mkIf inInitrd
+      ''
+        $out/bin/btrfs --version
       '';
 
     boot.initrd.postDeviceCommands = mkIf inInitrd

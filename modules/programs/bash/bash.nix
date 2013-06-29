@@ -322,5 +322,8 @@ in
     '';
 
   # always link bash_completion.d, user's may want to opt-in.
-  environment.pathsToLink = ["/etc/bash_completion.d"];
+  environment.pathsToLink = [
+    "/etc/bash_completion.d"
+    "/share/bash-completion"
+  ];
 }
