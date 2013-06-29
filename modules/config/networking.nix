@@ -26,7 +26,7 @@ let
         routers will systemically drop the ipv4 queries. The symptom of this problem is
         that 'getent hosts example.com' only returns ipv6 (or perhaps only ipv4) addresses. The
         workaround for this is to specify the option 'single-request' in
-        /etc/resolve.conf. This option enables that.
+        /etc/resolv.conf. This option enables that.
       '';
     };
 
@@ -67,7 +67,7 @@ in
           '' + optionalString config.services.nscd.enable ''
             # Invalidate the nscd cache whenever resolv.conf is
             # regenerated.
-            libc_restart='${pkgs.systemd}/bin/systemctl restart --no-block nscd.service'
+            libc_restart='${pkgs.systemd}/bin/systemctl try-restart --no-block nscd.service'
           '' + optionalString cfg.dnsSingleRequest ''
             # only send one DNS request at a time
             resolv_conf_options='single-request'

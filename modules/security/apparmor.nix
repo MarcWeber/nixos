@@ -1,8 +1,11 @@
 {pkgs, config, ...}:
+
 let
   cfg = config.security.apparmor;
 in
+
 with pkgs.lib;
+
 {
 
   ###### interface
@@ -14,16 +17,17 @@ with pkgs.lib;
       enable = mkOption {
         default = false;
         description = ''
-          Enable AppArmor application security system
+          Enable AppArmor application security system. Enable only if
+          you want to further improve AppArmor.
         '';
       };
 
       profiles = mkOption {
         default = [];
-	merge = mergeListOption;
+        merge = mergeListOption;
         description = ''
-	  List of file names of AppArmor profiles.
-	'';
+          List of file names of AppArmor profiles.
+        '';
       };
 
     };
@@ -34,18 +38,30 @@ with pkgs.lib;
 
   config = mkIf (cfg.enable) {
 
-    jobs.apparmor =
-      { startOn = "startup";
+    assertions = [ { assertion = config.boot.kernelPackages.kernel.features ? apparmor
+                               && config.boot.kernelPackages.kernel.features.apparmor;
+                     message = "AppArmor is enabled, but the kernel doesn't have AppArmor support"; }
+                 ];
 
-	path = [ pkgs.apparmor ];
+    environment.systemPackages = [ pkgs.apparmor ];
 
-        preStart = concatMapStrings (profile: ''
-          apparmor_parser -Kv -I ${pkgs.apparmor}/etc/apparmor.d/ "${profile}"
-        '') cfg.profiles;
+    systemd.services.apparmor = {
+      #wantedBy = [ "basic.target" ];
+      wantedBy = [ "local-fs.target" ];
+      path = [ pkgs.apparmor ];
 
-	postStop = ''
-	'';
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = "yes";
+        ExecStart = concatMapStrings (profile:
+          ''${pkgs.apparmor}/sbin/apparmor_parser -rKv -I ${pkgs.apparmor}/etc/apparmor.d/ "${profile}" ; ''
+        ) cfg.profiles;
+        ExecStop = concatMapStrings (profile:
+          ''${pkgs.apparmor}/sbin/apparmor_parser -Rv -I ${pkgs.apparmor}/etc/apparmor.d/ "${profile}" ; ''
+        ) cfg.profiles;
       };
+
+    };
 
   };
 
