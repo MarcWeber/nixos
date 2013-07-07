@@ -220,7 +220,7 @@ in {
 
       enable = mkOption {
         default = true;
-        description = "Whether to enable the PHP FastCGI Process Manager.";
+        description = "Whether to enable the PHP FastCGI Process Manager. With empty pool this should have no effect";
       };
 
       stateDir = mkOption {
