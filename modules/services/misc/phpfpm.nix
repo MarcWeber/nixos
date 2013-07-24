@@ -158,7 +158,7 @@ let
         };
       phpIniLines =
           xd.phpIniLines
-          + (item.phpIniLines or "");
+          + (item.daemonCfg.phpIniLines or "");
 
 
       # using phpIniLines create a cfg-id
