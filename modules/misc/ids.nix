@@ -77,7 +77,8 @@ in
     nginx = 60;
     chrony = 61;
     smtpd = 63;
-    smtpq = 64;    
+    smtpq = 64;
+    firebird = 65;
 
     # When adding a uid, make sure it doesn't match an existing gid.
 
