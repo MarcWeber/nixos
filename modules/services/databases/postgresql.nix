@@ -29,7 +29,7 @@ let
     ''
       hba_file = '${pkgs.writeText "pg_hba.conf" cfg.authentication}'
       ident_file = '${pkgs.writeText "pg_ident.conf" cfg.identMap}'
-      log_destination = 'syslog'
+      log_destination = 'stderr'
       ${cfg.extraConfig}
     '';
 
@@ -66,13 +66,6 @@ in
         '';
       };
 
-      logDir = mkOption {
-        default = "/var/log/postgresql";
-        description = ''
-          Log directory for PostgreSQL.
-        '';
-      };
-
       dataDir = mkOption {
         default = "/var/db/postgresql";
         description = ''
@@ -91,6 +84,14 @@ in
         default = "";
         description = ''
           Defines the mapping from system users to database users.
+        '';
+      };
+
+      initialScript = mkOption {
+        default = null;
+        type = types.nullOr types.path;
+        description = ''
+          A file containing SQL statements to execute on first startup.
         '';
       };
 
@@ -127,6 +128,14 @@ in
       extraConfig = mkOption {
         default = "";
         description = "Additional text to be appended to <filename>postgresql.conf</filename>.";
+      };
+
+      recoveryConfig = mkOption {
+        default = null;
+        type = types.nullOr types.string;
+        description = ''
+          Values to put into recovery.conf file.
+        '';
       };
     };
 
@@ -173,9 +182,14 @@ in
                 chown -R postgres ${cfg.dataDir}
                 su -s ${pkgs.stdenv.shell} postgres -c 'initdb -U root'
                 rm -f ${cfg.dataDir}/*.conf
+                touch "${cfg.dataDir}/.first_startup"
             fi
 
-            ln -sfn ${configFile} ${cfg.dataDir}/postgresql.conf
+            ln -sfn "${configFile}" "${cfg.dataDir}/postgresql.conf"
+            ${optionalString (cfg.recoveryConfig != null) ''
+              ln -sfn "${pkgs.writeText "recovery.conf" cfg.recoveryConfig}" \
+                "${cfg.dataDir}/recovery.conf"
+            ''}
           ''; # */
 
         serviceConfig =
@@ -200,6 +214,13 @@ in
                 if ! kill -0 "$MAINPID"; then exit 1; fi
                 sleep 0.1
             done
+
+            if test -e "${cfg.dataDir}/.first_startup"; then
+              ${optionalString (cfg.initialScript != null) ''
+                cat "${cfg.initialScript}" | psql postgres
+              ''}
+              rm -f "${cfg.dataDir}/.first_startup"
+            fi
           '';
 
         unitConfig.RequiresMountsFor = "${cfg.dataDir}";
