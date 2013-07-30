@@ -6,7 +6,8 @@ with pkgs.lib;
   system.build.virtualBoxImage =
     pkgs.vmTools.runInLinuxVM (
       pkgs.runCommand "virtualbox-image"
-        { preVM =
+        { memSize = 1024;
+          preVM =
             ''
               mkdir $out
               diskImage=$out/image
@@ -56,12 +57,8 @@ with pkgs.lib;
               -p /nix/var/nix/profiles/system --set ${config.system.build.toplevel}
 
           # `nixos-rebuild' requires an /etc/NIXOS.
-          mkdir -p /mnt/etc
-          touch /mnt/etc/NIXOS
-
-          # Install a configuration.nix.
           mkdir -p /mnt/etc/nixos
-          cp ${./nova-config.nix} /mnt/etc/nixos/configuration.nix
+          touch /mnt/etc/NIXOS
 
           # `switch-to-configuration' requires a /bin/sh
           mkdir -p /mnt/bin
