@@ -107,9 +107,10 @@ in
             fi
 
             chown -R ${cfg.user} "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
-            chmod -R 700 ${cfg.user} "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
+            chmod -R 700 "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
           '';
 
+        serviceConfig.PermissionsStartOnly = true; # preStart must be run as root
         serviceConfig.User = cfg.user;
         serviceConfig.ExecStart = ''${firebird}/bin/fbserver -d'';
 
@@ -118,7 +119,7 @@ in
 
     environment.etc."firebird/firebird.msg".source = "${firebird}/firebird.msg";
 
-   # think about this again - and eventually make it an option
+    # think about this again - and eventually make it an option
     environment.etc."firebird/firebird.conf".text = ''
       # RootDirectory = Restrict ${cfg.dataDir}
       DatabaseAccess = Restrict ${cfg.dataDir}
