@@ -4,3 +4,4 @@ master
 experimental/minimal-install-archive
 systemd/php-fpm
 systemd/postfix
+systemd/firebird
