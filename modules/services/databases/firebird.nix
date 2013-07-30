@@ -57,28 +57,18 @@ in
 
       user = mkOption {
         default = "firebird";
-        description = "User account under which MySQL runs";
+        description = "User account under which firebird runs.";
       };
 
       dataDir = mkOption {
         default = "/var/db/firebird/data"; # ubuntu is using /var/lib/firebird/2.1/data/.. ?
-        description = "Location where firebird databases are stored";
+        description = "Location where firebird databases are stored.";
       };
-
-      # logError = mkOption {
-      #   default = "/var/log/firebird_err.log";
-      #   description = "Location of the MySQL error logfile";
-      # };
 
       pidDir = mkOption {
-        default = "/var/run/firebird";
-        description = "Location of the file which stores the PID of the MySQL server";
+        default = "/run/firebird";
+        description = "Location of the file which stores the PID of the firebird server.";
       };
-
-#       rootPassword = mkOption {
-#         default = null;
-#         description = "Path to a file containing the root password, modified on the first startup. Not specifying a root password will leave the root password empty.";
-#       };
 
     };
 
@@ -104,40 +94,31 @@ in
         # TODO: is it ok to move security2.fdb into the data directory?
         preStart =
           ''
-            # create data dir
-            if [ ! -e ${cfg.dataDir} -o ! -e /var/log/firebird ]; then
-                mkdir -m 0700 -p ${cfg.dataDir} /var/log/firebird
-                chown -R ${cfg.user} ${cfg.dataDir} /var/log/firebird
+            secureDir="${cfg.dataDir}/../system"
+
+            mkdir -m 0700 -p \
+              "${cfg.dataDir}" \
+              "${cfg.pidDir}" \
+              /var/log/firebird \
+              "$secureDir"
+
+            if ! test -e "$secureDir/security2.fdb"; then
+                cp ${firebird}/security2.fdb "$secureDir"
             fi
 
-            # secureDir=/var/db/firebird/system
-            secureDir=${cfg.dataDir}/../system
-            if ! test -e $secureDir/security2.fdb; then
-                mkdir -p -m 700 "$secureDir"
-                cp ${firebird}/security2.fdb $secureDir
-                chown ${cfg.user} $secureDir/security2.fdb
-                chmod 700 $secureDir/security2.fdb
-                chown -R ${cfg.user} $secureDir
-            fi
-
-            # create pid directory
-            mkdir -m 0700 -p ${cfg.pidDir}
-            chown -R ${cfg.user} ${cfg.pidDir}
+            chown -R ${cfg.user} "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
+            chmod -R 700 ${cfg.user} "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
           '';
 
-        serviceConfig.ExecStart = ''${pkgs.su}/bin/su -s ${pkgs.bash}/bin/sh ${cfg.user} -c '${firebird}/bin/fbserver -d' '';
+        serviceConfig.User = cfg.user;
+        serviceConfig.ExecStart = ''${firebird}/bin/fbserver -d'';
 
-        # postStop = "${firebirdgh/bin/firebirdadmin ${optionalString (cfg.rootPassword != null) "--user=root --password=\"$(cat ${cfg.rootPassword})\""} shutdown";
-
-        # !!! Need a postStart script to wait until firebird is ready to
-        # accept connections.
-
-        # extraConfig = "kill timeout 60";
+        # TODO think about shutdown
       };
 
     environment.etc."firebird/firebird.msg".source = "${firebird}/firebird.msg";
 
-      # think about this again - and eventually make it an option
+   # think about this again - and eventually make it an option
     environment.etc."firebird/firebird.conf".text = ''
       # RootDirectory = Restrict ${cfg.dataDir}
       DatabaseAccess = Restrict ${cfg.dataDir}
