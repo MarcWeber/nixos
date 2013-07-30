@@ -98,11 +98,12 @@ in
         }
       ];
 
-    jobs.fail2ban =
+    systemd.services.fail2ban =
       { description = "Fail2ban intrusion prevention system";
+
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network.target" ];
       
-        startOn = "started networking";
-        
         path = [ pkgs.fail2ban pkgs.iptables ];
         
         preStart =
@@ -113,7 +114,12 @@ in
             mkdir -p /var/run/fail2ban -m 0755
           '';
           
-        exec = "fail2ban-server -f";
+        serviceConfig =
+          { ExecStart = "${pkgs.fail2ban}/bin/fail2ban-server -f";
+            ReadOnlyDirectories = "/";
+            ReadWriteDirectories = "/var/run/fail2ban /var/tmp";
+            CapabilityBoundingSet="CAP_DAC_READ_SEARCH CAP_NET_ADMIN CAP_NET_RAW";
+          };
 
         postStart =
           ''
