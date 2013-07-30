@@ -64,9 +64,27 @@ in {
   };
 
   testScript = ''
-    startAll;
-    $machine->waitForUnit("default.target");
-    my $diskStart = $machine->succeed("dd if=/dev/vda bs=512 count=1");
+    my $diskStart;
+    my @mtab;
+
+    sub getMtab {
+      my $mounts = $machine->succeed("cat /proc/mounts");
+      chomp $mounts;
+      return map [split], split /\n/, $mounts;
+    }
+
+    sub parttest {
+      my ($desc, $code) = @_;
+      $machine->start;
+      $machine->waitForUnit("default.target");
+
+      # Gather mounts and superblock
+      @mtab = getMtab;
+      $diskStart = $machine->succeed("dd if=/dev/vda bs=512 count=1");
+
+      subtest($desc, $code);
+      $machine->shutdown;
+    }
 
     sub ensureSanity {
       # Check whether the filesystem in /dev/vda is still intact
@@ -76,6 +94,21 @@ in {
                       "something into the first 512 bytes of /dev/vda!");
         die;
       }
+
+      # Check whether nixpart has unmounted anything
+      my @currentMtab = getMtab;
+      for my $mount (@mtab) {
+        my $path = $mount->[1];
+        unless (grep { $_->[1] eq $path } @currentMtab) {
+          $machine->log("The partitioner seems to have unmounted $path.");
+          die;
+        }
+      }
+    }
+
+    sub checkMount {
+      my $mounts = $machine->succeed("cat /proc/mounts");
+
     }
 
     sub kickstart {
@@ -100,7 +133,41 @@ in {
       $machine->succeed("test ! -e /dev/$_[0]");
     }
 
-    subtest "ext2, ext3 and ext4 filesystems", sub {
+    sub ensureMountPoint {
+      $machine->succeed("mountpoint $_[0]");
+    }
+
+    sub remount_and_check {
+      $machine->nest("Remounting partitions:", sub {
+        # XXX: "findmnt -ARunl -oTARGET /mnt" seems to NOT print all mounts!
+        my $getmounts_cmd = "cat /proc/mounts | cut -d' ' -f2 | grep '^/mnt'";
+        # Insert canaries first
+        my $canaries = $machine->succeed($getmounts_cmd . " | while read p;" .
+                                         " do touch \"\$p/canary\";" .
+                                         " echo \"\$p/canary\"; done");
+        # Now unmount manually
+        $machine->succeed($getmounts_cmd . " | tac | xargs -r umount");
+        # /mnt should be empty or non-existing
+        my $found = $machine->succeed("find /mnt -mindepth 1");
+        chomp $found;
+        if ($found) {
+          $machine->log("Cruft found in /mnt:\n$found");
+          die;
+        }
+        # Try to remount with nixpart
+        $machine->succeed("nixpart -vm /kickstart");
+        ensureMountPoint("/mnt");
+        # Check if our beloved canaries are dead
+        chomp $canaries;
+        $machine->nest("Checking canaries:", sub {
+          for my $canary (split /\n/, $canaries) {
+            $machine->succeed("test -e '$canary'");
+          }
+        });
+      });
+    }
+
+    parttest "ext2, ext3 and ext4 filesystems", sub {
       kickstart("${ksExt}");
       ensurePartition("boot", "ext2");
       ensurePartition("swap", "swap");
@@ -109,9 +176,13 @@ in {
       ensurePartition("/dev/vdb4", "boot sector");
       ensureNoPartition("vdb6");
       ensureNoPartition("vdc1");
+      remount_and_check;
+      ensureMountPoint("/mnt/boot");
+      ensureMountPoint("/mnt/nix");
     };
 
-    subtest "btrfs filesystem", sub {
+    parttest "btrfs filesystem", sub {
+      $machine->succeed("modprobe btrfs");
       kickstart("${ksBtrfs}");
       ensurePartition("swap1", "swap");
       ensurePartition("swap2", "swap");
@@ -119,9 +190,10 @@ in {
       ensurePartition("/dev/vdc2", "btrfs");
       ensureNoPartition("vdb3");
       ensureNoPartition("vdc3");
+      remount_and_check;
     };
 
-    subtest "RAID1 with XFS", sub {
+    parttest "RAID1 with XFS", sub {
       kickstart("${ksRaid}");
       ensurePartition("swap1", "swap");
       ensurePartition("swap2", "swap");
@@ -130,9 +202,11 @@ in {
       ensureNoPartition("vdb4");
       ensureNoPartition("vdc4");
       ensureNoPartition("md2");
+      remount_and_check;
+      ensureMountPoint("/mnt/boot");
     };
 
-    subtest "RAID1 with LUKS and LVM", sub {
+    parttest "RAID1 with LUKS and LVM", sub {
       kickstart("${ksRaidLvmCrypt}");
       ensurePartition("/dev/vdb1", "data");
       ensureNoPartition("vdb2");
@@ -145,6 +219,8 @@ in {
       ensurePartition("/dev/nixos/boot", "ext3");
       ensurePartition("/dev/nixos/swap", "swap");
       ensurePartition("/dev/nixos/root", "ext4");
+      remount_and_check;
+      ensureMountPoint("/mnt/boot");
     };
   '';
 }

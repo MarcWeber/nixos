@@ -1,3 +1,5 @@
+{ version }:
+
 { pkgs, ... }:
 
 let
@@ -6,9 +8,9 @@ let
     { config, pkgs, ... }:
     { fileSystems = pkgs.lib.mkOverride 50
         [ { mountPoint = "/data";
-            device = "server:/data";
+            device = "server:${if version == 4 then "/" else "/data"}";
             fsType = "nfs";
-            options = "vers=3";
+            options = "vers=${toString version}";
           }
         ];
     };
@@ -26,7 +28,7 @@ in
         { services.nfs.server.enable = true;
           services.nfs.server.exports =
             ''
-              /data 192.168.1.0/255.255.255.0(rw,no_root_squash)
+              /data 192.168.1.0/255.255.255.0(rw,no_root_squash,no_subtree_check,fsid=0)
             '';
           services.nfs.server.createMountPoints = true;
         };
