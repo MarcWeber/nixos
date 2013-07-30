@@ -52,7 +52,7 @@ in
 
       port = mkOption {
         default = "3050";
-        description = "Port of Firebird";
+        description = "Port of Firebird.";
       };
 
       user = mkOption {
@@ -79,10 +79,7 @@ in
 
   config = mkIf config.services.firebird.enable {
 
-    users.extraUsers = singleton
-      { name = "firebird";
-        description = "firebird server user";
-      };
+    users.extraUsers.firebird.description =  "Firebird server user";
 
     environment.systemPackages = [firebird];
 
@@ -91,7 +88,8 @@ in
 
         wantedBy = [ "multi-user.target" ];
 
-        # TODO: is it ok to move security2.fdb into the data directory?
+        # TODO: moving security2.fdb into the data directory works, maybe there
+        # is a better way
         preStart =
           ''
             secureDir="${cfg.dataDir}/../system"
