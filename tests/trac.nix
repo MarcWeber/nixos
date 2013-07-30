@@ -17,6 +17,7 @@
       {
         services.openssh.enable = true;
         services.postgresql.enable = true;
+        services.postgresql.package = pkgs.postgresql92;
         services.postgresql.enableTCPIP = true;
         services.postgresql.authentication = ''
           # Generated file; do not edit!
@@ -61,6 +62,7 @@
       $webserver->succeed("mkdir -p /repos/trac");
       $webserver->succeed("svnadmin create /repos/trac");
 
+      $webserver->waitForUnit("httpd");
       $webserver->waitForFile("/var/trac");
       $webserver->succeed("mkdir -p /var/trac/projects/test");
       $webserver->succeed("PYTHONPATH=${pkgs.pythonPackages.psycopg2}/lib/${pkgs.python.libPrefix}/site-packages trac-admin /var/trac/projects/test initenv Test postgres://root\@postgresql/trac svn /repos/trac");

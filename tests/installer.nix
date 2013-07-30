@@ -25,6 +25,7 @@ let
                 pkgs.docbook5_xsl
                 pkgs.grub
                 pkgs.perlPackages.XMLLibXML
+                pkgs.unionfs-fuse
               ];
           }
         ];
@@ -81,6 +82,7 @@ let
 
       virtualisation.writableStore = true;
       virtualisation.pathsInNixDB = channelContents;
+      virtualisation.memorySize = 768;
     };
 
   channelContents = [ pkgs.hello.src pkgs.rlwrap ];
@@ -325,24 +327,22 @@ in {
       nodes = { };
       testScript =
         ''
-          # damn, it's costly to evaluate nixos-rebuild (1G of ram)
-          my $machine = createMachine({ cdrom => glob("${iso}/iso/*.iso"), qemuFlags => '-m 1024' });
+          my $machine = createMachine({ cdrom => glob("${iso}/iso/*.iso"), qemuFlags => '-m 768' });
           $machine->start;
 
           # Enable sshd service.
           $machine->succeed(
-            "sed -i 's,^}\$,jobs.sshd.startOn = pkgs.lib.mkOverride 0 \"startup\"; },' /etc/nixos/configuration.nix"
+            "sed -i 's,^}\$,systemd.services.sshd.wantedBy = pkgs.lib.mkOverride 0 [\"multi-user.target\"]; },' /etc/nixos/configuration.nix"
           );
 
-          my $cfg = $machine->succeed("cat /etc/nixos/configuration.nix");
-          print STDERR "New CD config:\n$cfg\n";
+          $machine->succeed("cat /etc/nixos/configuration.nix >&2");
 
           # Apply the new CD configuration.
           $machine->succeed("nixos-rebuild test");
 
           # Connect to it-self.
-          #$machine->waitForUnit("sshd");
-          #$machine->succeed("ssh root@127.0.0.1 echo hello");
+          $machine->waitForUnit("sshd");
+          $machine->waitForOpenPort(22);
 
           $machine->shutdown;
         '';
