@@ -52,7 +52,7 @@ in
 
       port = mkOption {
         default = "3050";
-        description = "Port of Firebird";
+        description = "Port of Firebird.";
       };
 
       user = mkOption {
@@ -79,10 +79,7 @@ in
 
   config = mkIf config.services.firebird.enable {
 
-    users.extraUsers = singleton
-      { name = "firebird";
-        description = "firebird server user";
-      };
+    users.extraUsers.firebird.description =  "Firebird server user";
 
     environment.systemPackages = [firebird];
 
@@ -91,7 +88,8 @@ in
 
         wantedBy = [ "multi-user.target" ];
 
-        # TODO: is it ok to move security2.fdb into the data directory?
+        # TODO: moving security2.fdb into the data directory works, maybe there
+        # is a better way
         preStart =
           ''
             secureDir="${cfg.dataDir}/../system"
@@ -107,9 +105,10 @@ in
             fi
 
             chown -R ${cfg.user} "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
-            chmod -R 700 ${cfg.user} "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
+            chmod -R 700 "${cfg.pidDir}" "${cfg.dataDir}" "$secureDir" /var/log/firebird
           '';
 
+        serviceConfig.PermissionsStartOnly = true; # preStart must be run as root
         serviceConfig.User = cfg.user;
         serviceConfig.ExecStart = ''${firebird}/bin/fbserver -d'';
 
@@ -118,7 +117,7 @@ in
 
     environment.etc."firebird/firebird.msg".source = "${firebird}/firebird.msg";
 
-   # think about this again - and eventually make it an option
+    # think about this again - and eventually make it an option
     environment.etc."firebird/firebird.conf".text = ''
       # RootDirectory = Restrict ${cfg.dataDir}
       DatabaseAccess = Restrict ${cfg.dataDir}
