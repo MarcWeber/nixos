@@ -79,7 +79,7 @@ let
       description = "
         Script used to initialized zsh shell prompt.
       ";
-      type = with pkgs.lib.types; string;
+      type = types.lines;
     };
 
     environment.zsh.shellInit = mkOption {
@@ -88,18 +88,18 @@ let
       description = "
         Script used to initialized user shell environments.
       ";
-      type = with pkgs.lib.types; string;
+      type = types.lines;
     };
 
     environment.zsh.enableCompletion = mkOption {
       default = true;
       description = "Enable zsh-completion for all interactive shells.";
-      type = with pkgs.lib.types; bool;
+      type = types.bool;
     };
 
     environment.zsh.usedFeatures = mkOption {
       default = attrNames cfg.availableFeatures;
-      type = types.listOf types.string;
+      type = types.listOf types.lines;
       description = ''
         List zsh features which should be activated by default. Allow system
         administrators to provide a white list

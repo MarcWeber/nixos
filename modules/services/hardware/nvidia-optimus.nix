@@ -1,7 +1,6 @@
-{pkgs, config, ...}:
+{ config, pkgs, ... }:
 
-let kernel = config.boot.kernelPackages;
-in
+let kernel = config.boot.kernelPackages; in
 
 {
 
@@ -13,7 +12,8 @@ in
       default = false;
       type = pkgs.lib.types.bool;
       description = ''
-        completely disable the nvidia gfx chip (saves power / heat) and just use IGP
+        Completely disable the NVIDIA graphics card and use the
+        integrated graphics processor instead.
       '';
     };
 
@@ -27,13 +27,16 @@ in
     boot.kernelModules = [ "bbswitch" ];
     boot.extraModulePackages = [ kernel.bbswitch ];
 
-    jobs.bbswitch = {
-      name = "bbswitch";
-      description = "turn off nvidia card";
-      startOn = "stopped udevtrigger";
-      exec = "discrete_vga_poweroff";
-      path = [kernel.bbswitch];
-      task = true;
+    systemd.services.bbswitch = {
+      description = "Disable NVIDIA Card";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${kernel.bbswitch}/bin/discrete_vga_poweroff";
+        ExecStop = "${kernel.bbswitch}/bin/discrete_vga_poweron";
+      };
+      path = [ kernel.bbswitch ];
     };
   };
 

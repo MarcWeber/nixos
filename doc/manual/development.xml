@@ -18,10 +18,20 @@ uses the NixOS and Nixpkgs sources provided by the
 <literal>nixos-unstable</literal> channel (kept in
 <filename>/nix/var/nix/profiles/per-user/root/channels/nixos</filename>).
 To modify NixOS, however, you should check out the latest sources from
-Subversion.  This is done using the following command:
+Git.  This is done using the following command:
 
 <screen>
 $ nixos-checkout <replaceable>/my/sources</replaceable>
+</screen>
+
+or
+
+<screen>
+$ mkdir -p <replaceable>/my/sources</replaceable>
+$ cd <replaceable>/my/sources</replaceable>
+$ nix-env -i git
+$ git clone git://github.com/NixOS/nixos.git
+$ git clone git://github.com/NixOS/nixpkgs.git
 </screen>
 
 This will check out the latest NixOS sources to
@@ -37,6 +47,25 @@ $ nixos-rebuild switch -I <replaceable>/my/sources</replaceable>
 </screen>
 
 </para>
+
+<para><command>nixos-rebuild</command> affects only the system profile.
+To install packages to your user profile from expressions in
+<replaceable>/my/sources</replaceable>, use
+<command>nix-env -f <replaceable>/my/sources</replaceable>/nixpkgs</command>,
+or change the default by replacing the symlink in
+<filename>~/.nix-defexpr</filename>:
+
+<screen>
+$ rm -f ~/.nix-defexpr/channels
+$ ln -s <replaceable>/my/sources</replaceable>/nixpkgs ~/.nix-defexpr/nixpkgs
+</screen>
+
+</para>
+
+<para>You should not pass the base directory
+<filename><replaceable>/my/sources</replaceable></filename>
+to <command>nix-env</command>, as it will break after interpreting expressions
+in <filename>nixos/</filename> as packages.</para>
 
 </section>
 
@@ -55,7 +84,7 @@ $ nixos-rebuild switch -I <replaceable>/my/sources</replaceable>
   directory</para>
 
 <para>A module is a file which handles one specific part of the
-  configuration.  This part of the configuration could correspond to an
+  configuration.  This part of the configuration could correspond to
   hardware, a service, network settings, or preferences.  A module
   configuration does not have to handle everything from scratch, it can base
   its configuration on other configurations provided by other modules.  Thus
@@ -311,7 +340,7 @@ where <replaceable>attr</replaceable> is an attribute in
 </para>
 
 <para>
-Most parts of NixOS can be build through the <varname>config</varname>
+Most parts of NixOS can be built through the <varname>config</varname>
 attribute set.  This attribute set allows you to have a view of the merged
 option definitions and all its derivations.  Important derivations are store
 inside the option <option>system.build</option> and can be listed with the
@@ -331,7 +360,7 @@ config.system.build</command>
 <para>Building a NixOS CD is as easy as configuring your own computer. The
 idea is to use another module which will replace
 your <filename>configuration.nix</filename> to configure the system that
-would be install on the CD.</para>
+would be installed on the CD.</para>
 
 <para>Default CD/DVD configurations are available
 inside <filename>nixos/modules/installer/cd-dvd</filename>.  To build them
@@ -359,9 +388,27 @@ $ mount -o loop -t iso9660 ./result/iso/cd.iso /mnt/iso</screen>
 
 <section>
 
+<title>Testing/building the NixOS Manual</title>
+
+<para>A quick way to see if your documentation improvements
+or option descriptions look good:
+
+<screen>
+$ nix-build -A config.system.build.manual</screen>
+
+</para>
+
+</section>
+
+
+<!--===============================================================-->
+
+<section>
+
 <title>Testing the installer</title>
 
-<para>Building, burning, and booting from an installation CD is rather
+<para>Building, burning, and
+booting from an installation CD is rather
 tedious, so here is a quick way to see if the installer works
 properly:
 
@@ -376,6 +423,7 @@ $ ./result/bin/nixos-install</screen>
 </para>
 
 </section>
+
 
 
 <!--===============================================================-->
@@ -495,10 +543,10 @@ starting VDE switch for network 1
 
   <para>
     This and other tests are continuously run on <link
-    xlink:href="http://hydra.nixos.org/jobset/nixos/trunk/with-status">the
-    Hydra instance at <literal>nixos.org</literal></link>, which
-    allows developers to be notified of any regressions introduced by
-    a NixOS or Nixpkgs change.
+    xlink:href="http://hydra.nixos.org/jobset/nixos/trunk">the Hydra
+    instance at <literal>nixos.org</literal></link>, which allows
+    developers to be notified of any regressions introduced by a NixOS
+    or Nixpkgs change.
   </para>
 
   <para>
@@ -524,28 +572,27 @@ starting VDE switch for network 1
     <variablelist>
 
       <varlistentry>
-	<term><varname>test</varname></term>
-	<listitem><para>A derivation containing the test log as an HTML file,
-	as seen above, suitable for presentation in the Hydra continuous
-	build system.</para></listitem>
+        <term><varname>test</varname></term>
+        <listitem><para>A derivation containing the test log as an HTML file,
+        as seen above, suitable for presentation in the Hydra continuous
+        build system.</para></listitem>
       </varlistentry>
 
       <varlistentry>
-	<term><varname>report</varname></term>
-	<listitem><para>A derivation containing a code coverage report, with
-	meta-data suitable for Hydra.</para></listitem>
+        <term><varname>report</varname></term>
+        <listitem><para>A derivation containing a code coverage report, with
+        meta-data suitable for Hydra.</para></listitem>
       </varlistentry>
 
       <varlistentry>
-	<term><varname>driver</varname></term>
-	<listitem><para>A derivation containing scripts to run the VM test or
-	interact with the VM network interactively, as seen above.</para>
-	</listitem>
+        <term><varname>driver</varname></term>
+        <listitem><para>A derivation containing scripts to run the VM test or
+        interact with the VM network interactively, as seen above.</para>
+        </listitem>
       </varlistentry>
 
     </variablelist>
   </para>
-    
 
 </section>
 
