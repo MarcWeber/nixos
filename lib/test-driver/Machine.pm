@@ -30,7 +30,7 @@ sub new {
     if (!$startCommand) {
         # !!! merge with qemu-vm.nix.
         $startCommand =
-            "$ENV{'qemu'} -enable-kvm -m 384 " .
+            "qemu-kvm -m 384 " .
             "-net nic,model=virtio \$QEMU_OPTS ";
         my $iface = $args->{hdaInterface} || "virtio";
         $startCommand .= "-drive file=" . Cwd::abs_path($args->{hda}) . ",if=$iface,boot=on,werror=report "
@@ -48,9 +48,13 @@ sub new {
         make_path($sharedDir, { mode => 0700, owner => $< });
     }
 
+    my $allowReboot = 0;
+    $allowReboot = $args->{allowReboot} if defined $args->{allowReboot};
+
     my $self = {
         startCommand => $startCommand,
         name => $name,
+        allowReboot => $allowReboot,
         booted => 0,
         pid => 0,
         connected => 0,
@@ -136,7 +140,8 @@ sub start {
         $ENV{SHARED_DIR} = $sharedDir;
         $ENV{USE_TMPDIR} = 1;
         $ENV{QEMU_OPTS} =
-            "-no-reboot -monitor unix:./monitor -chardev socket,id=shell,path=./shell " .
+            ($self->{allowReboot} ? "" : "-no-reboot ") .
+            "-monitor unix:./monitor -chardev socket,id=shell,path=./shell " .
             "-device virtio-serial -device virtconsole,chardev=shell " .
             ($showGraphics ? "-serial stdio" : "-nographic") . " " . ($ENV{QEMU_OPTS} || "");
         chdir $self->{stateDir} or die;
