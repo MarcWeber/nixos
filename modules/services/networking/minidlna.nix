@@ -72,12 +72,19 @@ in
         '') cfg.mediaDirs}
       '';
 
-    users.extraUsers.minidlna.description = "MiniDLNA daemon user";
+    users.extraUsers.minidlna = {
+      description = "MiniDLNA daemon user";
+      group = "minidlna";
+      uid = config.ids.uids.minidlna;
+    };
+
+    users.extraGroups.minidlna.gid = config.ids.gids.minidlna;
 
     systemd.services.minidlna =
       { description = "MiniDLNA Server";
 
         wantedBy = [ "multi-user.target" ];
+        after = [ "network.target" ];
 
         preStart =
           ''

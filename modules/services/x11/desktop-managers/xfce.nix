@@ -45,6 +45,7 @@ in
     environment.systemPackages =
       [ pkgs.gtk # To get GTK+'s themes.
         pkgs.hicolor_icon_theme
+        pkgs.tango-icon-theme
         pkgs.shared_mime_info
         pkgs.which # Needed by the xfce's xinitrc script.
         pkgs.xfce.exo
@@ -76,7 +77,7 @@ in
       ++ optional config.powerManagement.enable pkgs.xfce.xfce4_power_manager;
 
     environment.pathsToLink =
-      [ "/share/xfce4" "/share/themes" "/share/mime" "/share/desktop-directories" ];
+      [ "/share/xfce4" "/share/themes" "/share/mime" "/share/desktop-directories" "/share/gtksourceview-2.0" ];
 
     environment.shellInit =
       ''
