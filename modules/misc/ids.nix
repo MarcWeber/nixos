@@ -1,5 +1,5 @@
 # This module defines the global list of uids and gids.  We keep a
-# central list to prevent id collissions.
+# central list to prevent id collisions.
 
 {config, pkgs, ...}:
 
@@ -77,7 +77,32 @@ in
     nginx = 60;
     chrony = 61;
     smtpd = 63;
-    smtpq = 64;    
+    smtpq = 64;
+    supybot = 65;
+    iodined = 66;
+    graphite = 68;
+    statsd = 69;
+    transmission = 70;
+    postgres = 71;
+    smbguest = 74;
+    varnish = 75;
+    dd-agent = 76;
+    lighttpd = 77;
+    lightdm = 78;
+    freenet = 79;
+    ircd = 80;
+    bacula = 81;
+    almir = 82;
+    deluge = 83;
+    mysql = 84;
+    rabbitmq = 85;
+    activemq = 86;
+    gnunet = 87;
+    oidentd = 88;
+    quassel = 89;
+    amule = 90;
+    minidlna = 91;
+    elasticsearch = 92;
 
     # When adding a uid, make sure it doesn't match an existing gid.
 
@@ -138,7 +163,33 @@ in
     nginx = 60;
     systemd-journal = 62;
     smtpd = 63;
-    smtpq = 64;    
+    smtpq = 64;
+    supybot = 65;
+    iodined = 66;
+    libvirtd = 67;
+    graphite = 68;
+    transmission = 70;
+    postgres = 71;
+    vboxusers = 72;
+    vboxsf = 73;
+    smbguest = 74;
+    varnish = 75;
+    dd-agent = 76;
+    lighttpd = 77;
+    lightdm = 78;
+    freenet = 79;
+    ircd = 80;
+    bacula = 81;
+    almir = 82;
+    deluge = 83;
+    mysql = 84;
+    rabbitmq = 85;
+    activemq = 86;
+    gnunet = 87;
+    oidentd = 88;
+    quassel = 89;
+    amule = 90;
+    minidlna = 91;
 
     # When adding a gid, make sure it doesn't match an existing uid.
 

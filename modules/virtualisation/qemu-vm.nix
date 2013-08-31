@@ -114,6 +114,16 @@ let
           '';
       };
 
+    virtualisation.writableStoreUseTmpfs =
+      mkOption {
+        default = true;
+        description =
+          ''
+            Use a tmpfs for the writable store instead of writing to the VM's
+            own filesystem.
+          '';
+      };
+
     networking.primaryIPAddress =
       mkOption {
         default = "";
@@ -158,7 +168,7 @@ let
       NIX_DISK_IMAGE=$(readlink -f ''${NIX_DISK_IMAGE:-${config.virtualisation.diskImage}})
 
       if ! test -e "$NIX_DISK_IMAGE"; then
-          ${pkgs.qemu}/bin/qemu-img create -f qcow2 "$NIX_DISK_IMAGE" \
+          ${pkgs.qemu_kvm}/bin/qemu-img create -f qcow2 "$NIX_DISK_IMAGE" \
             ${toString config.virtualisation.diskSize}M || exit 1
       fi
 
@@ -172,15 +182,14 @@ let
       idx=2
       extraDisks=""
       ${flip concatMapStrings cfg.emptyDiskImages (size: ''
-        ${pkgs.qemu}/bin/qemu-img create -f raw "empty$idx" "${toString size}M"
+        ${pkgs.qemu_kvm}/bin/qemu-img create -f raw "empty$idx" "${toString size}M"
         extraDisks="$extraDisks -drive index=$idx,file=$(pwd)/empty$idx,if=virtio,werror=report"
         idx=$((idx + 1))
       '')}
 
       # Start QEMU.
       # "-boot menu=on" is there, because I don't know how to make qemu boot from 2nd hd.
-      exec ${pkgs.qemu}/bin/qemu-system-${if pkgs.stdenv.system == "x86_64-linux" then "x86_64" else "i386"} \
-          -enable-kvm \
+      exec ${pkgs.qemu_kvm}/bin/qemu-kvm \
           -name ${vmName} \
           -m ${toString config.virtualisation.memorySize} \
           ${optionalString (pkgs.stdenv.system == "x86_64-linux") "-cpu kvm64"} \
@@ -226,7 +235,7 @@ let
             ''
               mkdir $out
               diskImage=$out/disk.img
-              ${pkgs.qemu}/bin/qemu-img create -f qcow2 $diskImage "32M"
+              ${pkgs.qemu_kvm}/bin/qemu-img create -f qcow2 $diskImage "32M"
             '';
           buildInputs = [ pkgs.utillinux ];
         }
@@ -298,7 +307,13 @@ in
         mount --rbind $targetRoot/nix/store /unionfs-chroot/ro-store
 
         mkdir /unionfs-chroot/rw-store
+        ${if cfg.writableStoreUseTmpfs then ''
         mount -t tmpfs -o "mode=755" none /unionfs-chroot/rw-store
+        '' else ''
+        mkdir $targetRoot/.nix-rw-store
+        mount --bind $targetRoot/.nix-rw-store /unionfs-chroot/rw-store
+        ''}
+
         unionfs -o allow_other,cow,nonempty,chroot=/unionfs-chroot,max_files=32768,hide_meta_files /rw-store=RW:/ro-store=RO $targetRoot/nix/store
       ''}
     '';

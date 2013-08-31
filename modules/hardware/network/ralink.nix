@@ -10,7 +10,7 @@
       default = false;
       type = pkgs.lib.types.bool;
       description = ''
-        Turn on this option if you want firmware for the RT73 NIC
+        Turn on this option if you want firmware for the RT73 NIC.
       '';
     };
 
@@ -20,7 +20,7 @@
   ###### implementation
 
   config = pkgs.lib.mkIf config.networking.enableRalinkFirmware {
-    hardware.firmware = [ pkgs.ralink_fw ];
+    hardware.enableAllFirmware = true;
   };
 
 }

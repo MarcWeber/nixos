@@ -34,7 +34,9 @@ let
       pkgs.runCommand "nix.conf" {extraOptions = cfg.extraOptions; } ''
         extraPaths=$(for i in $(cat ${binshDeps}); do if test -d $i; then echo $i; fi; done)
         cat > $out <<END
-        # WARNING: this file is generated.
+        # WARNING: this file is generated from the nix.* options in
+        # your NixOS configuration, typically
+        # /etc/nixos/configuration.nix.  Do not edit it!
         build-users-group = nixbld
         build-max-jobs = ${toString (cfg.maxJobs)}
         build-use-chroot = ${if cfg.useChroot then "true" else "false"}
@@ -69,7 +71,7 @@ in
         description = "
           This option defines the maximum number of jobs that Nix will try
           to build in parallel.  The default is 1.  You should generally
-          set it to the number of CPUs in your system (e.g., 2 on a Athlon
+          set it to the number of CPUs in your system (e.g., 2 on an Athlon
           64 X2).
         ";
       };
@@ -114,20 +116,20 @@ in
           <command>nixos-rebuild --no-build-hook</command>
           or consider managing <filename>/etc/nix.machines</filename> manually
           by setting <option>manualNixMachines</option>. Then you can comment
-          unavailable buildmachines.
+          unavailable build machines.
         ";
       };
 
       manualNixMachines = mkOption {
         default = false;
         description = "
-          Whether to manually manage the list of buildmachines used in distributed
+          Whether to manually manage the list of build machines used in distributed
           builds in /etc/nix.machines.
         ";
       };
 
       daemonNiceLevel = mkOption {
-        default = 10;
+        default = 0;
         description = "
           Nix daemon process priority. This priority propagates to build processes.
           0 is the default Unix process priority, 20 is the lowest.
@@ -135,7 +137,7 @@ in
       };
 
       daemonIONiceLevel = mkOption {
-        default = 7;
+        default = 0;
         description = "
           Nix daemon process I/O priority. This priority propagates to build processes.
           0 is the default Unix process I/O priority, 7 is the lowest.
@@ -155,26 +157,32 @@ in
             sshKey = "/root/.ssh/id_buildfarm";
             system = "x86_64-linux";
             maxJobs = 2;
+            supportedFeatures = "kvm";
+            mandatoryFeatures = "perf";
           }
         ];
         description = "
           This option lists the machines to be used if distributed
           builds are enabled (see
           <option>nix.distributedBuilds</option>).  Nix will perform
-          derivations on those machines via SSh by copying the inputs to
-          the Nix store on the remote machine, starting the build, then
-          copying the output back to the local Nix store.  Each element
-          of the list should be an attribute set containing the
-          machine's host name (<varname>hostname</varname>), the user
-          name to be used for the SSH connection
+          derivations on those machines via SSH by copying the inputs
+          to the Nix store on the remote machine, starting the build,
+          then copying the output back to the local Nix store.  Each
+          element of the list should be an attribute set containing
+          the machine's host name (<varname>hostname</varname>), the
+          user name to be used for the SSH connection
           (<varname>sshUser</varname>), the Nix system type
           (<varname>system</varname>, e.g.,
-          <literal>\"i686-linux\"</literal>), the maximum number of jobs
-          to be run in parallel on that machine
-          (<varname>maxJobs</varname>), and the path to the SSH private
-          key to be used to connect (<varname>sshKey</varname>).  The
-          SSH private key should not have a passphrase, and the
-          corresponding public key should be added to
+          <literal>\"i686-linux\"</literal>), the maximum number of
+          jobs to be run in parallel on that machine
+          (<varname>maxJobs</varname>), the path to the SSH private
+          key to be used to connect (<varname>sshKey</varname>), a
+          list of supported features of the machine
+          (<varname>supportedFeatures</varname>) and a list of
+          mandatory features of the machine
+          (<varname>mandatoryFeatures</varname>). The SSH private key
+          should not have a passphrase, and the corresponding public
+          key should be added to
           <filename>~<replaceable>sshUser</replaceable>/authorized_keys</filename>
           on the remote machine.
         ";
@@ -263,6 +271,10 @@ in
             + (if machine ? system then machine.system else concatStringsSep "," machine.systems)
             + " ${machine.sshKey} ${toString machine.maxJobs} "
             + (if machine ? speedFactor then toString machine.speedFactor else "1" )
+            + " "
+            + (if machine ? supportedFeatures then concatStringsSep "," machine.supportedFeatures else "" )
+            + " "
+            + (if machine ? mandatoryFeatures then concatStringsSep "," machine.mandatoryFeatures else "" )
             + "\n"
           ) cfg.buildMachines;
       };
