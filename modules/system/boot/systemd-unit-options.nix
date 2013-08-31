@@ -118,7 +118,7 @@ rec {
       default = {};
       type = types.attrs;
       example = { PATH = "/foo/bar/bin"; LANG = "nl_NL.UTF-8"; };
-      description = "Environment variables passed to the services's processes.";
+      description = "Environment variables passed to the service's processes.";
     };
 
     path = mkOption {
@@ -145,6 +145,16 @@ rec {
         <citerefentry><refentrytitle>systemd.service</refentrytitle>
         <manvolnum>5</manvolnum></citerefentry> for details.
       '';
+
+      check = v:
+        let assertValueOneOf = name: values: attr:
+              let val = getAttr name attr;
+              in optional ( hasAttr name attr && !elem val values) "${name} ${val} not known to systemd";
+            checkType = assertValueOneOf "Type" ["simple" "forking" "oneshot" "dbus" "notify" "idle"];
+            checkRestart = assertValueOneOf "Restart" ["no" "on-success" "on-failure" "on-abort" "always"];
+            errors = concatMap (c: c v) [checkType checkRestart];
+        in if errors == [] then true
+           else builtins.trace (concatStringsSep "\n" errors) false;
     };
 
     script = mkOption {

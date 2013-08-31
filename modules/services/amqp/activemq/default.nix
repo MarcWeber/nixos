@@ -55,7 +55,7 @@ in {
         default = "/var/activemq";
         description = ''
           The base directory where ActiveMQ stores its persistent data and logs.
-          This will be overriden if you set "activemq.base" and "activemq.data"
+          This will be overridden if you set "activemq.base" and "activemq.data"
           in the <literal>javaProperties</literal> option. You can also override
           this in activemq.xml.
         '';
@@ -89,32 +89,17 @@ in {
           Java runtime when the broker service is started.
         '';
       };
-      user = {
-        create = mkOption {
-          type = types.bool;
-          default = true;
-          description = ''
-            If true, the a system user with the specified name will be added
-            to the system configuration. If false, a user with the specified
-            name is expected to exist.
-          '';
-        };
-        name = mkOption {
-          type = types.string;
-          default = "activemq";
-          description = ''
-            The name of the user that should run the ActiveMQ process.
-          '';
-        };
-      };
     };
   };
 
   config = mkIf cfg.enable {
-    users.extraUsers = mkIf cfg.user.create (singleton {
-      inherit (cfg.user) name;
+    users.extraUsers.activemq = {
       description = "ActiveMQ server user";
-    });
+      group = "activemq";
+      uid = config.ids.uids.activemq;
+    };
+
+    users.extraGroups.activemq.gid = config.ids.gids.activemq;
 
     systemd.services.activemq_init = {
       wantedBy = [ "activemq.service" ];

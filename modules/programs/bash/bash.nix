@@ -100,7 +100,7 @@ let
       description = "
         Script used to initialized sh/bash shell prompt.
       ";
-      type = with pkgs.lib.types; string;
+      type = types.lines;
     };
 
     environment.shellInit = mkOption {
@@ -109,20 +109,20 @@ let
       description = ''
         Shell script code called during login shell initialisation.
       '';
-      type = with pkgs.lib.types; string;
+      type = types.lines;
     };
 
     # TODO: rename to environment.bash.enableCompletion ?
     environment.enableBashCompletion = mkOption {
       default = false;
       description = "Enable Bash completion for all interactive shells.";
-      type = with pkgs.lib.types; bool;
+      type = types.bool;
     };
 
     environment.binsh = mkOption {
       default = "${config.system.build.binsh}/bin/sh";
       example = "\${pkgs.dash}/bin/dash";
-      type = with pkgs.lib.types; path;
+      type = types.path;
       description = ''
         Select the shell executable that is linked system-wide to
         <literal>/bin/sh</literal>. Please note that NixOS assumes all
@@ -181,9 +181,9 @@ in
         target = "profile";
       }
 
-      { # /etc/bashrc: executed every time a bash starts. Sources
-        # /etc/profile to ensure that the system environment is
-        # configured properly.
+      { # /etc/bashrc: executed every time an interactive bash
+        # starts. Sources /etc/profile to ensure that the system
+        # environment is configured properly.
         source = ./bashrc.sh;
         target = "bashrc";
       }
@@ -228,6 +228,9 @@ in
     other.interactive_code = ''
       # Check the window size after every command.
       shopt -s checkwinsize
+
+      # Disable hashing (i.e. caching) of command lookups.
+      set +h
     '';
 
     promptInit.interactive_code = config.environment.promptInit;
