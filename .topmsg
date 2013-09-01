@@ -1,6 +1,5 @@
 From: Marc Weber <marco-oweber@gmx.de>
-Subject: [PATCH] systemd/marc
+Subject: [PATCH] system/mm
 
-merge of my topic branches ported to systemd
+matthias mundelf
 
-Signed-off-by: Marc Weber <marco-oweber@gmx.de>
