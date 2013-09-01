@@ -193,6 +193,11 @@ in rec {
     inherit system;
   });
 
+  iso_matthias_mundelfingen = pkgs.lib.genAttrs systems (system: makeIso {
+    module = ./modules/iso-matthia-lug.nix;
+    type = "minimal";
+    inherit system;
+  });
 
   # A bootable VirtualBox image.  FIXME: generate a OVF appliance?
   vdi = pkgs.lib.genAttrs systems (system:
