@@ -84,6 +84,10 @@ let
           +"\n"
         ) usedFeatures) );
 
+in
+
+{
+
   options = {
 
     # TODO: move into bash namespace?
@@ -154,179 +158,176 @@ let
         </code>
       '';
     };
+
     environment.bash.shellAliases = mkOption {
-      type = types.attrs; # types.attrsOf types.stringOrPath;
       default = {};
+      example = { ll = "ls -l"; };
       description = ''
-        bash specific shell aliases. global shell aliases are merged into this attrs.
-        See environment.shellAliases.
+        See <option>environment.shellAliases</option>. That attr gets merged
+        into this.
       '';
+      type = types.attrs; # types.attrsOf types.stringOrPath;
     };
 
   };
 
-in
+  config = {
+    environment.etc =
+      [ { # Script executed when the shell starts as a login shell.
+          source = pkgs.substituteAll {
+            src = ./profile.sh;
+            wrapperDir = config.security.wrapperDir;
+            shellInit = config.environment.shellInit;
+            nixBashLib = nixBashLibPath;
+          };
+          target = "profile";
+        }
 
-{
-  require = [options];
+        { # /etc/bashrc: executed every time an interactive bash
+          # starts. Sources /etc/profile to ensure that the system
+          # environment is configured properly.
+          source = ./bashrc.sh;
+          target = "bashrc";
+        }
 
-  environment.etc =
-    [ { # Script executed when the shell starts as a login shell.
-        source = pkgs.substituteAll {
-          src = ./profile.sh;
-          wrapperDir = config.security.wrapperDir;
-          shellInit = config.environment.shellInit;
-          nixBashLib = nixBashLibPath;
-        };
-        target = "profile";
-      }
+        { # Configuration for readline in bash.
+          source = ./inputrc;
+          target = "inputrc";
+        }
 
-      { # /etc/bashrc: executed every time an interactive bash
-        # starts. Sources /etc/profile to ensure that the system
-        # environment is configured properly.
-        source = ./bashrc.sh;
-        target = "bashrc";
-      }
+        { # some helper functions which are loaded as needed
+          source = nixBashLib;
+          target = "bash/nix-bash-lib";
+        }
 
-      { # Configuration for readline in bash.
-        source = ./inputrc;
-        target = "inputrc";
-      }
+        { # default bash interactive setup which get's added to each user's
+          # .bashrc using skel/.bashrc, see below.
+          # This allows the user to opt-out and administrators to update
+          # the implementation
+          target = "bash/setup-all";
+          source = pkgs.writeText "bash-setup-all" setupAll;
+        }
 
-      { # some helper functions which are loaded as needed
-        source = nixBashLib;
-        target = "bash/nix-bash-lib";
-      }
+        # Be polite: suggest proper default setup - but let user opt-out.
+        { target = "skel/.bashrc";
+          source = pkgs.writeText "default-user-bashrc" ''
+            if [ -n "$PS1" ]; then
+              source /etc/bash/setup-all
+            fi
+          '';
+        }
 
-      { # default bash interactive setup which get's added to each user's
-        # .bashrc using skel/.bashrc, see below.
-        # This allows the user to opt-out and administrators to update
-        # the implementation
-        target = "bash/setup-all";
-        source = pkgs.writeText "bash-setup-all" setupAll;
-      }
 
-      # Be polite: suggest proper default setup - but let user opt-out.
-      { target = "skel/.bashrc";
-        source = pkgs.writeText "default-user-bashrc" ''
-          if [ -n "$PS1" ]; then
-            source /etc/bash/setup-all
+      ];
+
+    environment.bash.shellAliases = config.shellAliases
+      // {which = "type -P"; };
+
+    environment.bash.availableFeatures = {
+
+      other.interactive_code = ''
+        # Check the window size after every command.
+        shopt -s checkwinsize
+
+        # Disable hashing (i.e. caching) of command lookups.
+        set +h
+      '';
+
+      promptInit.interactive_code = config.environment.promptInit;
+
+      # TODO: is it a good idea to always provide pkgs.bashCompletion ?
+      # how does it compare with completion provided by the bash sample code ?
+      completion = {
+        interactive_code = ''
+          if ${if config.environment.enableBashCompletion then "true" else "false" }; then
+            source ${nixBashLibPath}
+            [ -e /etc/bash/completion ] && . /etc/bash/completion
+            nix_foreach_profile nix_add_profile_completion
           fi
         '';
-      }
+        lib = ''
+          # completion support you can opt out by setting NIX_COMPL_SCRIPT_SOURCED[ALL]
+          # to either the basename of a completion script or ALL.
+
+          declare -A NIX_COMPL_SCRIPT_SOURCED
+
+          # potential problems (-rev 20179)
+          #  - It doesn't support filenames with spaces.
+          #  - It inserts a space after the filename when tab-completing in an
+          #    "svn" command.
+          #  - Many people find it annoying that tab-completion on commands like
+          #    "tar" only matches filenames with the "right" extension.
+          #  - Lluís reported bash apparently crashing on some tab completions.
+          # comment: Does this apply to complete.gnu-longopt or also to bash_completion?
+          NIX_COMPL_SCRIPT_SOURCED[complete.gnu-longopt]=1
 
 
-    ];
+          if shopt -q progcomp &>/dev/null; then
+            # bash supports completion:
+            nix_add_profile_completion(){
+              local profile="$1"
 
-  environment.bash.shellAliases = config.shellAliases
-    // {which = "type -P"; };
+              # origin: bash_completion, slightly adopted
+              # source script only once - allow user to use NIX_COMPL_SCRIPT_SOURCED to
+              # opt out from bad scripts. If a user wants to reload all he can clear
+              # NIX_COMPL_SCRIPT_SOURCED
 
-  environment.bash.availableFeatures = {
+              local nullglobStatus=$(shopt -p nullglob)
+              shopt -s nullglob
+              for s in "$profile"/etc/bash_completion.d/* "$p/share/bash-completion/completions/"*; do
+                local base="''${s/*\//}"
+                [[
+                  -z "''${NIX_COMPL_SCRIPT_SOURCED[$base]}" &&
+                  -z "''${NIX_COMPL_SCRIPT_SOURCED[ALL]}"
+                ]] && { . "$s"; NIX_COMPL_SCRIPT_SOURCED[$base]=1; }
 
-    environment.zsh.shellAliases = config.environment.shellAliases;
-
-    other.interactive_code = ''
-      # Check the window size after every command.
-      shopt -s checkwinsize
-
-      # Disable hashing (i.e. caching) of command lookups.
-      set +h
-    '';
-
-    promptInit.interactive_code = config.environment.promptInit;
-
-    # TODO: is it a good idea to always provide pkgs.bashCompletion ?
-    # how does it compare with completion provided by the bash sample code ?
-    completion = {
-      interactive_code = ''
-        if ${if config.environment.enableBashCompletion then "true" else "false" }; then
-          source ${nixBashLibPath}
-          [ -e /etc/bash/completion ] && . /etc/bash/completion
-          nix_foreach_profile nix_add_profile_completion
-        fi
-      '';
-      lib = ''
-        # completion support you can opt out by setting NIX_COMPL_SCRIPT_SOURCED[ALL]
-        # to either the basename of a completion script or ALL.
-
-        declare -A NIX_COMPL_SCRIPT_SOURCED
-
-        # potential problems (-rev 20179)
-        #  - It doesn't support filenames with spaces.
-        #  - It inserts a space after the filename when tab-completing in an
-        #    "svn" command.
-        #  - Many people find it annoying that tab-completion on commands like
-        #    "tar" only matches filenames with the "right" extension.
-        #  - Lluís reported bash apparently crashing on some tab completions.
-        # comment: Does this apply to complete.gnu-longopt or also to bash_completion?
-        NIX_COMPL_SCRIPT_SOURCED[complete.gnu-longopt]=1
-
-
-        if shopt -q progcomp &>/dev/null; then
-          # bash supports completion:
-          nix_add_profile_completion(){
-            local profile="$1"
-
-            # origin: bash_completion, slightly adopted
-            # source script only once - allow user to use NIX_COMPL_SCRIPT_SOURCED to
-            # opt out from bad scripts. If a user wants to reload all he can clear
-            # NIX_COMPL_SCRIPT_SOURCED
-
-            local nullglobStatus=$(shopt -p nullglob)
-            shopt -s nullglob
-            for s in "$profile"/etc/bash_completion.d/* "$p/share/bash-completion/completions/"*; do
-              local base="''${s/*\//}"
-              [[
-                -z "''${NIX_COMPL_SCRIPT_SOURCED[$base]}" &&
-                -z "''${NIX_COMPL_SCRIPT_SOURCED[ALL]}"
-              ]] && { . "$s"; NIX_COMPL_SCRIPT_SOURCED[$base]=1; }
-
-            done
-            eval "$nullglobStatus"
-          }
-        else
-          nix_add_profile_completion(){ :; }
-        fi
-      '';
-    };
-
-    xmlCatalogFileSupport = {
-      name = "xml_catalog_file_support";
-      env_code = ''
-        source ${nixBashLibPath}
-        # not sure how well this scales - this maybe refactored in the future
-        # alternative would be introducing /etc/xml/catalog which might be more impure
-        nix_foreach_profile nix_add_xml_catalog
-      '';
-      lib = ''
-        nix_add_xml_catalog(){
-          # $1 = profile
-          for kind in dtd xsl; do
-            if [ -d $1/xml/$kind ]; then
-              for j in $(find $1/xml/$kind -name catalog.xml); do
-                nix_export_suffix XML_CATALOG_FILES "$j" ' '
               done
-            fi
-          done
-        }
-      '';
+              eval "$nullglobStatus"
+            }
+          else
+            nix_add_profile_completion(){ :; }
+          fi
+        '';
+      };
+
+      xmlCatalogFileSupport = {
+        name = "xml_catalog_file_support";
+        env_code = ''
+          source ${nixBashLibPath}
+          # not sure how well this scales - this maybe refactored in the future
+          # alternative would be introducing /etc/xml/catalog which might be more impure
+          nix_foreach_profile nix_add_xml_catalog
+        '';
+        lib = ''
+          nix_add_xml_catalog(){
+            # $1 = profile
+            for kind in dtd xsl; do
+              if [ -d $1/xml/$kind ]; then
+                for j in $(find $1/xml/$kind -name catalog.xml); do
+                  nix_export_suffix XML_CATALOG_FILES "$j" ' '
+                done
+              fi
+            done
+          }
+        '';
+      };
     };
+
+    system.build.binsh = pkgs.bashInteractive;
+
+    system.activationScripts.binsh = stringAfter [ "stdio" ]
+      ''
+        # Create the required /bin/sh symlink; otherwise lots of things
+        # (notably the system() function) won't work.
+        mkdir -m 0755 -p /bin
+        ln -sfn "${config.environment.binsh}" /bin/.sh.tmp
+        mv /bin/.sh.tmp /bin/sh # atomically replace /bin/sh
+      '';
+
+    # always link bash_completion.d, user's may want to opt-in.
+    environment.pathsToLink = [
+      "/etc/bash_completion.d"
+      "/share/bash-completion"
+    ];
   };
-
-  system.build.binsh = pkgs.bashInteractive;
-
-  system.activationScripts.binsh = stringAfter [ "stdio" ]
-    ''
-      # Create the required /bin/sh symlink; otherwise lots of things
-      # (notably the system() function) won't work.
-      mkdir -m 0755 -p /bin
-      ln -sfn "${config.environment.binsh}" /bin/.sh.tmp
-      mv /bin/.sh.tmp /bin/sh # atomically replace /bin/sh
-    '';
-
-  # always link bash_completion.d, user's may want to opt-in.
-  environment.pathsToLink = [
-    "/etc/bash_completion.d"
-    "/share/bash-completion"
-  ];
 }

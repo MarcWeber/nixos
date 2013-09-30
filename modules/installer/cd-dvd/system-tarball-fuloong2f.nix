@@ -12,15 +12,10 @@ let
   # evaluated.  So we'll just hope for the best.
   dummyConfiguration = pkgs.writeText "configuration.nix"
     ''
-      {config, pkgs, ...}:
+      { config, pkgs, ... }:
 
-      {
-        require = [ ];
-
-        # Add your own options below
-        # E.g.,
+      { # Add your own options below, e.g.:
         #   services.openssh.enable = true;
-
         nixpkgs.config.platform = pkgs.platforms.fuloong2f_n32;
       }
     '';
@@ -45,11 +40,7 @@ let
 in
 
 {
-  require =
-    [
-      ./system-tarball.nix
-    ];
-
+  imports = [ ./system-tarball.nix ];
 
   # Disable some other stuff we don't need.
   security.sudo.enable = false;
@@ -162,8 +153,6 @@ in
   services.openssh.enable = true;
 
   jobs.openssh.startOn = pkgs.lib.mkOverrideTemplate 50 {} "";
-
-  services.ttyBackgrounds.enable = false;
 
   boot.loader.grub.enable = false;
   boot.loader.generationsDir.enable = false;

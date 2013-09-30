@@ -15,11 +15,9 @@ let
   # evaluated.  So we'll just hope for the best.
   dummyConfiguration = pkgs.writeText "configuration.nix"
     ''
-      {config, pkgs, ...}:
+      { config, pkgs, ... }:
 
       {
-        require = [ ];
-
         # Add your own options below and run "nixos-rebuild switch".
         # E.g.,
         #   services.openssh.enable = true;
@@ -39,10 +37,7 @@ let
 in
 
 {
-  require =
-    [
-      ./system-tarball.nix
-    ];
+  imports = [ ./system-tarball.nix ];
 
   # Disable some other stuff we don't need.
   security.sudo.enable = false;
@@ -170,7 +165,6 @@ in
   # not be started by default on the installation CD because the
   # default root password is empty.
   services.openssh.enable = true;
-  services.ttyBackgrounds.enable = false;
   jobs.openssh.startOn = pkgs.lib.mkOverrideTemplate 50 {} "";
 
   # cpufrequtils fails to build on non-pc

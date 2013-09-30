@@ -66,6 +66,7 @@ in zipModules ([]
 # usage example:
 # ++ rename alias "services.xserver.slim.theme" "services.xserver.displayManager.slim.theme"
 ++ rename obsolete "environment.extraPackages" "environment.systemPackages"
+++ rename obsolete "environment.enableBashCompletion" "programs.bash.enableCompletion"
 
 ++ rename obsolete "security.extraSetuidPrograms" "security.setuidPrograms"
 ++ rename obsolete "networking.enableWLAN" "networking.wireless.enable"
@@ -106,5 +107,9 @@ in zipModules ([]
 ++ rename obsolete "boot.loader.efiBootStub.postEfiBootMgrCommands" "boot.loader.efi.efibootmgr.postEfiBootMgrCommands"
 ++ rename obsolete "boot.loader.efiBootStub.runEfibootmgr" "boot.loader.efi.canTouchEfiVariables"
 ++ rename obsolete "boot.loader.efi.efibootmgr.enable" "boot.loader.efi.canTouchEfiVariables"
+
+# NixOS environment changes
+# !!! this hardcodes bash, could we detect from config which shell is actually used?
+++ rename obsolete "environment.promptInit" "programs.bash.promptInit"
 
 ) # do not add renaming after this.

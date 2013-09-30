@@ -8,6 +8,7 @@
     { config, pkgs, ... }:
     { swapDevices = pkgs.lib.mkOverride 0
         [ { device = "/root/swapfile"; size = 128; } ];
+      environment.variables.EDITOR = pkgs.lib.mkOverride 0 "emacs";
     };
 
   testScript =
@@ -41,6 +42,21 @@
       # Test whether kernel.poweroff_cmd is set.
       subtest "poweroff_cmd", sub {
           $machine->succeed("[ -x \"\$(cat /proc/sys/kernel/poweroff_cmd)\" ]")
+      };
+
+      # Test whether the blkio controller is properly enabled.
+      subtest "blkio-cgroup", sub {
+          $machine->succeed("[ -n \"\$(cat /sys/fs/cgroup/blkio/blkio.sectors)\" ]")
+      };
+
+      # Test whether we have a reboot record in wtmp.
+      subtest "reboot-wtmp", sub {
+          $machine->succeed("last | grep reboot >&2");
+      };
+
+      # Test whether we can override environment variables.
+      subtest "override-env-var", sub {
+          $machine->succeed('[ "$EDITOR" = emacs ]');
       };
     '';
 

@@ -198,8 +198,7 @@ in
         example = "http://127.0.0.1:3128";
       };
 
-      # Environment variables for running Nix.  !!! Misnomer - it's
-      # actually a shell script.
+      # Environment variables for running Nix.
       envVars = mkOption {
         internal = true;
         default = {};
@@ -292,7 +291,7 @@ in
         path = [ nix pkgs.openssl pkgs.utillinux ]
           ++ optionals cfg.distributedBuilds [ pkgs.openssh pkgs.gzip ];
 
-        environment = cfg.envVars;
+        environment = cfg.envVars // { CURL_CA_BUNDLE = "/etc/ssl/certs/ca-bundle.crt"; };
 
         serviceConfig =
           { ExecStart = "@${nix}/bin/nix-daemon nix-daemon --daemon";
@@ -328,11 +327,11 @@ in
         ftp_proxy = cfg.proxy;
       };
 
-    environment.shellInit =
-      ''
-        # Set up the environment variables for running Nix.
-        ${concatMapStrings (n: "export ${n}=\"${getAttr n cfg.envVars}\"\n") (attrNames cfg.envVars)}
+    # Set up the environment variables for running Nix.
+    environment.variables = cfg.envVars;
 
+    environment.extraInit =
+      ''
         # Set up secure multi-user builds: non-root users build through the
         # Nix daemon.
         if test "$USER" != root; then

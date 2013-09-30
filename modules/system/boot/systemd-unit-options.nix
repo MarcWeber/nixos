@@ -76,6 +76,15 @@ rec {
       '';
     };
 
+    conflicts = mkOption {
+      default = [];
+      types = types.listOf types.string;
+      description = ''
+        If the specified units are started, then this unit is stopped
+        and vice versa.
+      '';
+    };
+
     requiredBy = mkOption {
       default = [];
       types = types.listOf types.string;
@@ -309,6 +318,30 @@ rec {
         Each attribute in this set specifies an option in the
         <literal>[Mount]</literal> section of the unit.  See
         <citerefentry><refentrytitle>systemd.mount</refentrytitle>
+        <manvolnum>5</manvolnum></citerefentry> for details.
+      '';
+    };
+  };
+
+  automountOptions = unitOptions // {
+
+    where = mkOption {
+      example = "/mnt";
+      type = types.uniq types.string;
+      description = ''
+        Absolute path of a directory of the mount point.
+        Will be created if it doesn't exist. (Mandatory)
+      '';
+    };
+
+    automountConfig = mkOption {
+      default = {};
+      example = { DirectoryMode = "0775"; };
+      type = types.attrs;
+      description = ''
+        Each attribute in this set specifies an option in the
+        <literal>[Automount]</literal> section of the unit.  See
+        <citerefentry><refentrytitle>systemd.automount</refentrytitle>
         <manvolnum>5</manvolnum></citerefentry> for details.
       '';
     };

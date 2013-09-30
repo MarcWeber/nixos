@@ -409,6 +409,9 @@ in
     boot.blacklistedKernelModules =
       optionals (elem "nvidia" driverNames) [ "nouveau" "nvidiafb" ];
 
+    environment.variables.LD_LIBRARY_PATH =
+      [ "/run/opengl-driver/lib" "/run/opengl-driver-32/lib" ];
+
     environment.etc =
       (optionals cfg.exportConfiguration
         [ { source = "${configFile}";
@@ -425,6 +428,12 @@ in
           # life harder ;) Still it seems to be required
           { source = "${kernelPackages.ati_drivers_x11}/etc/ati";
             target = "ati";
+          }
+      ])
+      ++ (optionals (elem "nvidia" driverNames) [
+
+          { source = "${kernelPackages.nvidia_x11}/lib/vendors/nvidia.icd";
+            target = "OpenCL/vendors/nvidia.icd";
           }
       ]);
 

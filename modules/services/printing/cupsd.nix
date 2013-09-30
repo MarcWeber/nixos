@@ -6,8 +6,6 @@ let
 
   inherit (pkgs) cups;
 
-  logDir = "/var/log/cups";
-
   cfg = config.services.printing;
 
   additionalBackends = pkgs.runCommand "additional-cups-backends" { }
@@ -117,24 +115,24 @@ in
     # gets loaded, and then cups cannot access the printers.
     boot.blacklistedKernelModules = [ "usblp" ];
 
-    jobs.cupsd =
+    systemd.services.cupsd =
       { description = "CUPS Printing Daemon";
 
-        startOn = "started network-interfaces";
-        stopOn = "stopping network-interfaces";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network-interfaces.target" ];
 
         path = [ cups ];
 
         preStart =
           ''
             mkdir -m 0755 -p /etc/cups
-            mkdir -m 0755 -p ${logDir}
             mkdir -m 0700 -p /var/cache/cups
             mkdir -m 0700 -p /var/spool/cups
             mkdir -m 0755 -p ${cfg.tempDir}
           '';
 
-        exec = "cupsd -c ${pkgs.writeText "cupsd.conf" cfg.cupsdConf} -F";
+        serviceConfig.Type = "forking";
+        serviceConfig.ExecStart = "@${cups}/sbin/cupsd cupsd -c ${pkgs.writeText "cupsd.conf" cfg.cupsdConf}";
       };
 
     services.printing.drivers =
@@ -159,9 +157,9 @@ in
 
         SetEnv PATH ${bindir}/lib/cups/filter:${bindir}/bin:${bindir}/sbin
 
-        AccessLog ${logDir}/access_log
-        ErrorLog ${logDir}/error_log
-        PageLog ${logDir}/page_log
+        AccessLog syslog
+        ErrorLog syslog
+        PageLog syslog
 
         TempDir ${cfg.tempDir}
 

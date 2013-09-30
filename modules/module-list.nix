@@ -13,7 +13,7 @@
   ./config/nsswitch.nix
   ./config/power-management.nix
   ./config/pulseaudio.nix
-  ./config/shells.nix
+  ./config/shells-environment.nix
   ./config/swap.nix
   ./config/sysctl.nix
   ./config/system-path.nix
@@ -46,6 +46,7 @@
   ./programs/zsh/zsh.nix
   ./programs/bash/command-not-found.nix
   ./programs/blcr.nix
+  ./programs/environment.nix
   ./programs/info.nix
   ./programs/shadow.nix
   ./programs/shell.nix
@@ -53,6 +54,7 @@
   ./programs/ssmtp.nix
   ./programs/venus.nix
   ./programs/wvdial.nix
+  ./programs/zsh/zsh.nix
   ./rename.nix
   ./security/apparmor.nix
   ./security/apparmor-suid.nix
@@ -151,6 +153,7 @@
   ./services/networking/dnsmasq.nix
   ./services/networking/ejabberd.nix
   ./services/networking/firewall.nix
+  ./services/networking/tcpcrypt.nix
   ./services/networking/flashpolicyd.nix
   ./services/networking/freenet.nix
   ./services/networking/git-daemon.nix
@@ -168,7 +171,6 @@
   ./services/networking/oidentd.nix
   ./services/networking/openfire.nix
   ./services/networking/openvpn.nix
-  ./services/networking/portmap.nix
   ./services/networking/prayer.nix
   ./services/networking/privoxy.nix
   ./services/networking/quassel.nix
@@ -227,7 +229,6 @@
   #./services/x11/window-managers/compiz.nix
   ./services/x11/window-managers/default.nix
   ./services/x11/window-managers/icewm.nix
-  ./services/x11/window-managers/kwm.nix
   ./services/x11/window-managers/metacity.nix
   ./services/x11/window-managers/none.nix
   ./services/x11/window-managers/twm.nix
@@ -238,6 +239,7 @@
   ./system/activation/activation-script.nix
   ./system/activation/top-level.nix
   ./system/boot/kernel.nix
+  ./system/boot/kexec.nix
   ./system/boot/loader/efi-boot-stub/efi-boot-stub.nix
   ./system/boot/loader/efi.nix
   ./system/boot/loader/generations-dir/generations-dir.nix
@@ -269,7 +271,6 @@
   ./tasks/network-interfaces.nix
   ./tasks/scsi-link-power-management.nix
   ./tasks/swraid.nix
-  ./tasks/tty-backgrounds.nix
   ./virtualisation/libvirtd.nix
   ./virtualisation/nova.nix
   ./virtualisation/virtualbox-guest.nix

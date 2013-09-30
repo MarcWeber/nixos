@@ -72,21 +72,6 @@ let
       # SysV init compatibility.
       "systemd-initctl.socket"
       "systemd-initctl.service"
-      "runlevel0.target"
-      "runlevel1.target"
-      "runlevel2.target"
-      "runlevel3.target"
-      "runlevel4.target"
-      "runlevel5.target"
-      "runlevel6.target"
-
-      # Random seed.
-      "systemd-random-seed-load.service"
-      "systemd-random-seed-save.service"
-
-      # Utmp maintenance.
-      "systemd-update-utmp-runlevel.service"
-      "systemd-update-utmp-shutdown.service"
 
       # Kernel module loading.
       #"systemd-modules-load.service"
@@ -129,6 +114,7 @@ let
       "umount.target"
       "final.target"
       "kexec.target"
+      "systemd-kexec.service"
 
       # Password entry.
       "systemd-ask-password-console.path"
@@ -165,6 +151,7 @@ let
           Before = concatStringsSep " " config.before;
           BindsTo = concatStringsSep " " config.bindsTo;
           PartOf = concatStringsSep " " config.partOf;
+          Conflicts = concatStringsSep " " config.conflicts;
           "X-Restart-Triggers" = toString config.restartTriggers;
         } // optionalAttrs (config.description != "") {
           Description = config.description;
@@ -194,6 +181,14 @@ let
           Type = config.type;
         } // optionalAttrs (config.options != "") {
           Options = config.options;
+        };
+    };
+  };
+
+  automountConfig = { name, config, ... }: {
+    config = {
+      automountConfig =
+        { Where = config.where;
         };
     };
   };
@@ -301,6 +296,18 @@ let
 
           [Mount]
           ${attrsToSection def.mountConfig}
+        '';
+    };
+
+  automountToUnit = name: def:
+    { inherit (def) wantedBy requiredBy enable;
+      text =
+        ''
+          [Unit]
+          ${attrsToSection def.unitConfig}
+
+          [Automount]
+          ${attrsToSection def.automountConfig}
         '';
     };
 
@@ -453,6 +460,17 @@ in
       '';
     };
 
+    systemd.automounts = mkOption {
+      default = [];
+      type = types.listOf types.optionSet;
+      options = [ automountOptions unitConfig automountConfig ];
+      description = ''
+        Definition of systemd automount units.
+        This is a list instead of an attrSet, because systemd mandates the names to be derived from
+        the 'where' attribute.
+      '';
+    };
+
     systemd.defaultUnit = mkOption {
       default = "multi-user.target";
       type = types.uniq types.string;
@@ -592,7 +610,10 @@ in
       // mapAttrs' (n: v: nameValuePair "${n}.timer" (timerToUnit n v)) cfg.timers
       // listToAttrs (map
                    (v: let n = escapeSystemdPath v.where;
-                       in nameValuePair "${n}.mount" (mountToUnit n v)) cfg.mounts);
+                       in nameValuePair "${n}.mount" (mountToUnit n v)) cfg.mounts)
+      // listToAttrs (map
+                   (v: let n = escapeSystemdPath v.where;
+                       in nameValuePair "${n}.automount" (automountToUnit n v)) cfg.automounts);
 
     system.requiredKernelConfig = map config.lib.kernelConfig.isEnabled [
       "CGROUPS" "AUTOFS4_FS" "DEVTMPFS"
@@ -606,6 +627,44 @@ in
       };
 
     users.extraGroups.systemd-journal.gid = config.ids.gids.systemd-journal;
+
+    # FIXME: These are borrowed from upstream systemd.
+    systemd.services."systemd-update-utmp" =
+      { description = "Update UTMP about System Reboot/Shutdown";
+        wantedBy = [ "sysinit.target" ];
+        after = [ "systemd-remount-fs.service" ];
+        before = [ "sysinit.target" "shutdown.target" ];
+        conflicts = [ "shutdown.target" ];
+        unitConfig = {
+          DefaultDependencies = false;
+          RequiresMountsFor = "/var/log";
+        };
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = "${systemd}/lib/systemd/systemd-update-utmp reboot";
+          ExecStop = "${systemd}/lib/systemd/systemd-update-utmp shutdown";
+        };
+        restartIfChanged = false;
+      };
+
+    systemd.services."systemd-random-seed" =
+      { description = "Load/Save Random Seed";
+        wantedBy = [ "sysinit.target" "multi-user.target" ];
+        after = [ "systemd-remount-fs.service" ];
+        before = [ "sysinit.target" "shutdown.target" ];
+        conflicts = [ "shutdown.target" ];
+        unitConfig = {
+          DefaultDependencies = false;
+          RequiresMountsFor = "/var/lib";
+        };
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = "${systemd}/lib/systemd/systemd-random-seed load";
+          ExecStop = "${systemd}/lib/systemd/systemd-random-seed save";
+        };
+      };
 
   };
 }

@@ -60,6 +60,9 @@ let
           +"\n"
         ) usedFeatures) );
 
+in
+
+{
   options = {
 
     environment.zsh.enable = mkOption {
@@ -79,7 +82,7 @@ let
       description = "
         Script used to initialized zsh shell prompt.
       ";
-      type = types.lines;
+      type = with pkgs.lib.types; string;
     };
 
     environment.zsh.shellInit = mkOption {
@@ -88,18 +91,18 @@ let
       description = "
         Script used to initialized user shell environments.
       ";
-      type = types.lines;
+      type = with pkgs.lib.types; string;
     };
 
     environment.zsh.enableCompletion = mkOption {
       default = true;
       description = "Enable zsh-completion for all interactive shells.";
-      type = types.bool;
+      type = with pkgs.lib.types; bool;
     };
 
     environment.zsh.usedFeatures = mkOption {
       default = attrNames cfg.availableFeatures;
-      type = types.listOf types.lines;
+      type = types.listOf types.string;
       description = ''
         List zsh features which should be activated by default. Allow system
         administrators to provide a white list
@@ -124,22 +127,18 @@ let
       '';
     };
 
+
     environment.zsh.shellAliases = mkOption {
-      type = types.attrs; # types.attrsOf types.stringOrPath;
       default = {};
+      example = { ll = "ls -l"; };
       description = ''
-        zsh specific shell aliases. global shell aliases are merged into this attrs.
-        See environment.shellAliases.
+        See <option>environment.shellAliases</option>. That attr gets merged
+        into this.
       '';
+      type = types.attrs; # types.attrsOf types.stringOrPath;
     };
 
-
   };
-
-in
-
-{
-  inherit options;
 
   config = mkIf config.environment.zsh.enable {
     environment.etc =
@@ -186,7 +185,8 @@ in
 
     environment.zsh.availableFeatures = {
 
-      aliases.interactive_code = shellAliases;
+      # TODO:
+      # aliases.interactive_code = shellAliases;
 
       other.interactive_code = ''
         # Check the window size after every command.

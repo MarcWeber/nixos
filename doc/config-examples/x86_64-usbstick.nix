@@ -5,7 +5,6 @@
     loader.grub.device = "/dev/sda";
     initrd = {
       kernelModules = ["usb_storage" "ehci_hcd" "ohci_hcd"];
-      enableSplashScreen = false;
     };
   };
 
@@ -14,12 +13,6 @@
       label = "nixos-usb";
     }
   ];
-
-  services = {
-    ttyBackgrounds = {
-      enable = false;
-    };
-  };
 
   fonts = {
     enableFontConfig = false;
