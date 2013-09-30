@@ -1,0 +1,9 @@
+From: Marc Weber <marco-oweber@gmx.de>
+Subject: [PATCH] systemd/php-fpm
+
+some changes to PHP: (the pull request for nixpkgs will be given in a comment)
+- id tag
+- system_fpm_config 
+- requires recent nix hashString implementation (everybody should have it now ?)
+
+More information see comments in phpfpm.nix
