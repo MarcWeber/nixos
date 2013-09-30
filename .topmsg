@@ -1,0 +1,6 @@
+From: Marc Weber <marco-oweber@gmx.de>
+Subject: [PATCH] systemd/virtualbox-server
+
+provide simple service loading kernel modules
+
+Signed-off-by: Marc Weber <marco-oweber@gmx.de>
