@@ -16,6 +16,9 @@ in
 
       enable = mkOption {
         default = false;
+        # description = "Whether to enable the Wacom touchscreen/digitizer/tablet.";
+
+        # is this outdated?:
         description = ''
           Whether to enable the Wacom touchscreen/digitizer/tablet.
           If you ever have any issues such as, try switching to terminal (ctrl-alt-F1) and back
