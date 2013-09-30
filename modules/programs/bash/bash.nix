@@ -91,7 +91,7 @@ in
   options = {
 
     # TODO: move into bash namespace?
-    environment.promptInit = mkOption {
+    programs.bash.promptInit = mkOption {
       default = ''
         # Provide a nice prompt.
         PROMPT_COLOR="1;31m"
@@ -107,32 +107,10 @@ in
       type = types.lines;
     };
 
-    environment.shellInit = mkOption {
-      default = "";
-      example = ''export PATH=/godi/bin/:$PATH'';
-      description = ''
-        Shell script code called during login shell initialisation.
-      '';
-      type = types.lines;
-    };
-
-    # TODO: rename to environment.bash.enableCompletion ?
-    environment.enableBashCompletion = mkOption {
+    programs.bash.enableCompletion = mkOption {
       default = false;
       description = "Enable Bash completion for all interactive shells.";
       type = types.bool;
-    };
-
-    environment.binsh = mkOption {
-      default = "${config.system.build.binsh}/bin/sh";
-      example = "\${pkgs.dash}/bin/dash";
-      type = types.path;
-      description = ''
-        Select the shell executable that is linked system-wide to
-        <literal>/bin/sh</literal>. Please note that NixOS assumes all
-        over the place that shell to be Bash, so override the default
-        setting only if you know exactly what you're doing.
-      '';
     };
 
     environment.bash.usedFeatures = mkOption {
@@ -220,7 +198,7 @@ in
 
       ];
 
-    environment.bash.shellAliases = config.shellAliases
+    environment.bash.shellAliases = config.environment.shellAliases
       // {which = "type -P"; };
 
     environment.bash.availableFeatures = {
@@ -239,7 +217,7 @@ in
       # how does it compare with completion provided by the bash sample code ?
       completion = {
         interactive_code = ''
-          if ${if config.environment.enableBashCompletion then "true" else "false" }; then
+          if ${if config.programs.bash.enableCompletion then "true" else "false" }; then
             source ${nixBashLibPath}
             [ -e /etc/bash/completion ] && . /etc/bash/completion
             nix_foreach_profile nix_add_profile_completion
