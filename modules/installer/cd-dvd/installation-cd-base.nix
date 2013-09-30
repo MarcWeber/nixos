@@ -32,4 +32,9 @@ with pkgs.lib;
   # To speed up installation a little bit, include the complete stdenv
   # in the Nix store on the CD.
   isoImage.storeContents = [ pkgs.stdenv pkgs.busybox ];
+
+  environment.shellInit = "export mountPoint=/mnt";
+
+  # Because github.com/nixos/* are official repositories make it easy to check them out using git
+  environment.systemPackages = [ pkgs.git ];
 }
