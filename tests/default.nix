@@ -1,4 +1,7 @@
-{ system ? builtins.currentSystem, minimal ? false }:
+{ nixpkgs ? <nixpkgs>
+, system ? builtins.currentSystem
+, minimal ? false
+}:
 
 with import ../lib/testing.nix { inherit system minimal; };
 
