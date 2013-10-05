@@ -7,8 +7,7 @@ with pkgs.lib;
 
 {
   imports =
-    [ ./memtest.nix
-      ./channel.nix
+    [ ./channel.nix
       ./iso-image.nix
 
       # Profiles of this basic installation CD.
@@ -37,4 +36,7 @@ with pkgs.lib;
 
   # Because github.com/nixos/* are official repositories make it easy to check them out using git
   environment.systemPackages = [ pkgs.git ];
+
+  # Add Memtest86+ to the CD.
+  boot.loader.grub.memtest86 = true;
 }
