@@ -268,6 +268,13 @@ in
         '';
       };
 
+      # temporary ?
+      nixos_setup = {
+        env_code = ''
+        . ${config.system.build.setEnvironment}
+        '';
+      };
+
       xmlCatalogFileSupport = {
         name = "xml_catalog_file_support";
         env_code = ''

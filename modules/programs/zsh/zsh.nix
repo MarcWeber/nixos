@@ -220,6 +220,13 @@ in
           fi
         '';
 
+      # temporary ?
+      nixos_setup = {
+        env_code = ''
+        . ${config.system.build.setEnvironment}
+        '';
+      };
+
       xmlCatalogFileSupport = {
         env_code = ''
           source ${nixZshLibPath}
